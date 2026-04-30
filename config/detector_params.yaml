@@ -1,0 +1,57 @@
+pcd_loader_node:
+  ros__parameters:
+    # input PCD file. Override with launch argument pcd_file when needed.
+    pcd_file: data/pcd/sample.pcd
+    # input point cloud frame. Default dataset setup assumes lidar.
+    input_frame_id: lidar
+    input_points_topic: /input/points
+    # publish_rate_hz must be > 0.0. publish_once=true publishes one frame and keeps the node alive.
+    publish_rate_hz: 1.0
+    publish_once: false
+
+vehicle_detector_node:
+  ros__parameters:
+    input_points_topic: /input/points
+    raw_detections_topic: /vehicle_detections/raw
+    filtered_points_topic: /debug/points_filtered
+    cluster_markers_topic: /debug/clusters
+    vehicle_markers_topic: /vehicle_markers
+    target_frame_id: map
+    # VoxelGrid leaf size [m]. Recommended range: 0.05 - 1.0.
+    voxel_leaf_size: 0.2
+    # ROI bounds [m] in target_frame_id coordinates.
+    roi_min_x: 0.0
+    roi_max_x: 80.0
+    roi_min_y: -30.0
+    roi_max_y: 30.0
+    roi_min_z: -3.0
+    roi_max_z: 3.0
+    # RANSAC ground plane distance threshold [m]. Recommended range: 0.05 - 0.5.
+    ground_distance_threshold: 0.2
+    # Euclidean clustering parameters.
+    cluster_tolerance: 0.8
+    cluster_min_size: 20
+    cluster_max_size: 5000
+    # Axis-aligned ordinary passenger vehicle bbox limits [m].
+    vehicle_min_length: 2.0
+    vehicle_max_length: 6.0
+    vehicle_min_width: 1.2
+    vehicle_max_width: 2.8
+    vehicle_min_height: 1.0
+    vehicle_max_height: 3.0
+
+detection_sender_node:
+  ros__parameters:
+    raw_detections_topic: /vehicle_detections/raw
+    detections_topic: /vehicle_detections
+    # send_mode: disabled, ros_topic, http, both.
+    send_mode: ros_topic
+    http_endpoint_url: http://host.docker.internal:8080/detections
+    http_timeout_ms: 1000
+    http_retry_count: 0
+    http_auth_type: none
+
+parameter_bridge_node:
+  ros__parameters:
+    # Local Web UI port exposed from the container to the Windows host.
+    gui_port: 8081

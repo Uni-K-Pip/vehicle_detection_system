@@ -1,0 +1,14 @@
+dataset:
+  # Dataset metadata for reproducible PCD placement.
+  # Runtime input is finally selected by pcd_loader_node.pcd_file or launch pcd_file.
+  name: pandaset_lidar_pcd_subset
+  source_url: https://www.pandaset.org/
+  download_url: https://ssd.mathworks.com/supportfiles/driving/data/PandasetLidarData.zip
+  license: CC-BY-4.0
+  attribution: PandaSet by Hesai and Scale AI
+  extract_dir: data/pandaset_lidar_pcd_subset
+  pcd_glob: Lidar/*.pcd
+  default_pcd_file: data/pandaset_lidar_pcd_subset/Lidar/<first_pcd_file>.pcd
+  # Initial frame assumptions. Detection results are transformed to target_frame_id.
+  input_frame_id: lidar
+  target_frame_id: map

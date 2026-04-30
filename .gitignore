@@ -1,0 +1,44 @@
+# ROS 2 / colcon build outputs
+build/
+install/
+log/
+
+# Local point cloud data
+*.pcd
+*.pcd.*
+data/pcd/*.pcd
+data/pcd/**/*.pcd
+data/pandaset_lidar_pcd_subset/
+
+# Large downloaded archives and extracted datasets
+*.zip
+*.tar
+*.tar.gz
+*.7z
+
+# Python cache and local tooling
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# CMake and compiler artifacts
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.o
+*.so
+*.a
+*.dll
+*.exe
+
+# Editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local notes that should not be published from this repo
+*_LOCAL.md
+*.local.md

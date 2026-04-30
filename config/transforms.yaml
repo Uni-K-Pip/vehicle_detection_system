@@ -1,0 +1,15 @@
+transforms:
+  lidar_to_map:
+    # Static transform used by launch for MVP.
+    # If exact extrinsics are unknown, keep identity and document that map is a provisional frame.
+    parent_frame_id: map
+    child_frame_id: lidar
+    # translation [m]
+    x: 0.0
+    y: 0.0
+    z: 0.0
+    # rotation [rad]
+    roll: 0.0
+    pitch: 0.0
+    yaw: 0.0
+    use_identity_if_missing: true
