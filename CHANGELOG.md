@@ -10,11 +10,19 @@ All notable changes to this project will be documented in this file.
 - Initial detector, dataset, and transform parameter files.
 - Git ignore rules for ROS 2 build outputs and large point cloud data.
 - Roadmap for portfolio-oriented development.
+- `ament_cmake` package scaffold under `src/vehicle_detection` with
+  `package.xml`, `CMakeLists.txt`, and install rules for launch and config.
+- `parameter_validation` library with range, enum, non-empty, and
+  existing-file checks plus GTest unit tests.
+
+### Moved
+
+- `config/` is now installed from `src/vehicle_detection/config/` rather
+  than the repository root.
 
 ### Planned
 
-- ROS 2 C++ package scaffold.
 - PCD loader node.
 - PCL-based vehicle candidate detector.
 - RViz visualization.
-- Unit tests and launch verification.
+- Launch verification.

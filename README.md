@@ -8,16 +8,34 @@ ROS 2 Jazzy / C++ / PCL を使った、PCD点群ベースの普通車検知シ�
 - 基本設計書: `docs/vehicle_detection_design.md`
 - コーディング前チェックリスト: `docs/pre_coding_checklist.md`
 
-## Initial Project Layout
+## Layout
 
 ```text
 vehicle_detection_system/
-  docs/
-  src/
-  launch/
-  config/
-  data/
-    pcd/
+  README.md
+  ROADMAP.md
+  CHANGELOG.md
+  LICENSE
+  data/pcd/                 # PCD files placed at runtime (not committed)
+  docs/                     # requirements, design, checklist
+  src/vehicle_detection/    # ament_cmake ROS 2 package
+    package.xml
+    CMakeLists.txt
+    include/vehicle_detection/
+    src/
+    launch/
+    config/                 # detector_params.yaml, dataset_params.yaml, transforms.yaml
+    test/
+```
+
+## Build
+
+```bash
+# inside a ROS 2 Jazzy environment, from this repo root:
+colcon build --packages-select vehicle_detection
+source install/setup.bash
+colcon test --packages-select vehicle_detection
+colcon test-result --verbose
 ```
 
 ## Initial Decisions

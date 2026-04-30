@@ -13,10 +13,10 @@ This roadmap tracks the growth of `vehicle_detection_system` as a portfolio proj
 
 ## v0.2.0 - ROS 2 Package Scaffold
 
-- [ ] Create `src/vehicle_detection` as an `ament_cmake` package
-- [ ] Add `package.xml`
-- [ ] Add `CMakeLists.txt`
-- [ ] Add launch and config install rules
+- [x] Create `src/vehicle_detection` as an `ament_cmake` package
+- [x] Add `package.xml`
+- [x] Add `CMakeLists.txt`
+- [x] Add launch and config install rules
 - [ ] Confirm `colcon build` succeeds
 
 ## v0.3.0 - PCD Loader
