@@ -28,12 +28,37 @@ vehicle_detection_system/
     test/
 ```
 
-## Build
+## Quick Start
 
 ```bash
-# inside a ROS 2 Jazzy environment, from this repo root:
+# 1) place a PCD at data/pcd/sample.pcd (see data/pcd/README.md)
+
+# 2) inside a ROS 2 Jazzy environment, from this repo root:
 colcon build --packages-select vehicle_detection
 source install/setup.bash
+
+# 3) launch (publishes the PCD on /input/points at 1 Hz):
+ros2 launch vehicle_detection vehicle_detection.launch.py \
+  pcd_file:=data/pcd/sample.pcd
+
+# 4) confirm:
+ros2 topic list
+ros2 topic echo /input/points --no-arr
+```
+
+Override behaviour with launch args:
+
+```bash
+ros2 launch vehicle_detection vehicle_detection.launch.py \
+  pcd_file:=/abs/path/to/cloud.pcd \
+  input_frame_id:=lidar \
+  target_frame_id:=map \
+  publish_once:=true
+```
+
+## Tests
+
+```bash
 colcon test --packages-select vehicle_detection
 colcon test-result --verbose
 ```

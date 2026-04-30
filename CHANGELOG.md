@@ -14,6 +14,16 @@ All notable changes to this project will be documented in this file.
   `package.xml`, `CMakeLists.txt`, and install rules for launch and config.
 - `parameter_validation` library with range, enum, non-empty, and
   existing-file checks plus GTest unit tests.
+- `pcd_loader_node`: loads a PCD via PCL and publishes
+  `sensor_msgs/msg/PointCloud2` on `/input/points`. Supports `publish_once`
+  and `publish_rate_hz` modes, validates parameters, resolves relative PCD
+  paths against the working directory, and logs PCD path, point count, and
+  field names on startup. Missing or unreadable files cause node init to
+  fail with an explicit error message.
+- `vehicle_detection.launch.py`: starts `pcd_loader_node` and a static
+  `target_frame_id` -> `input_frame_id` transform. Launch arguments:
+  `pcd_file`, `input_frame_id`, `target_frame_id`, `publish_once`,
+  `params_file`.
 
 ### Moved
 
@@ -22,7 +32,6 @@ All notable changes to this project will be documented in this file.
 
 ### Planned
 
-- PCD loader node.
 - PCL-based vehicle candidate detector.
 - RViz visualization.
-- Launch verification.
+- HTTP detection sender and Web GUI parameter bridge.

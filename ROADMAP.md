@@ -21,11 +21,12 @@ This roadmap tracks the growth of `vehicle_detection_system` as a portfolio proj
 
 ## v0.3.0 - PCD Loader
 
-- [ ] Implement `pcd_loader_node`
-- [ ] Load a configured PCD file
-- [ ] Publish `sensor_msgs/msg/PointCloud2` to `/input/points`
-- [ ] Support one-shot and periodic publishing
-- [ ] Add error handling for missing or invalid PCD files
+- [x] Implement `pcd_loader_node`
+- [x] Load a configured PCD file
+- [x] Publish `sensor_msgs/msg/PointCloud2` to `/input/points`
+- [x] Support one-shot and periodic publishing
+- [x] Add error handling for missing or invalid PCD files
+- [x] Add `vehicle_detection.launch.py` with static `target_frame_id` -> `input_frame_id` transform
 
 ## v0.4.0 - Vehicle Candidate Detection
 
