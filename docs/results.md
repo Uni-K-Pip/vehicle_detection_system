@@ -69,6 +69,12 @@ When `use_rviz:=true`, RViz is launched with
 `rviz/vehicle_detection.rviz`, which subscribes to all of the above
 topics with `Fixed Frame: map`.
 
+![RViz demo: vehicle detections (green bounding boxes) overlaid on the filtered PandaSet point cloud](images/rviz_demo_20260501_225537.png)
+
+The screenshot above shows `/vehicle_markers` (green AABBs) on top of
+`/debug/points_filtered` for the same PandaSet sample referenced in the
+pipeline numbers above.
+
 ## Known Limitations
 
 - Detection orientation is identity (axis-aligned). Yaw estimation is

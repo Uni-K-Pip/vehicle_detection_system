@@ -45,9 +45,9 @@ This roadmap tracks the growth of `vehicle_detection_system` as a portfolio proj
 - [x] Add static transform setup
 - [x] Add RViz config
 - [x] Confirm `/vehicle_detections` output
-- [ ] Capture demo screenshot or GIF (manual: launch with
-      `use_rviz:=true`; recorded numbers and frame contents are
-      already in `docs/results.md` and `docs/topic_echo.md`)
+- [x] Capture demo screenshot or GIF
+      (`docs/images/rviz_demo_20260501_225537.png`, embedded in
+      `README.md` and `docs/results.md`)
 
 ## v0.6.0 - Tests and Quality
 
@@ -80,8 +80,8 @@ This roadmap tracks the growth of `vehicle_detection_system` as a portfolio proj
       (`Dockerfile` based on `osrf/ros:jazzy-desktop`)
 - [x] Provide one-command launch instructions
       (`./tools/run_demo.sh`, also documented in README)
-- [ ] Provide RViz demo image (manual capture step; pipeline and
-      RViz config are reproducible)
+- [x] Provide RViz demo image
+      (`docs/images/rviz_demo_20260501_225537.png`)
 - [x] Provide architecture diagram image
       (`docs/images/architecture.svg`)
 - [x] Provide topic echo example (`docs/topic_echo.md`)

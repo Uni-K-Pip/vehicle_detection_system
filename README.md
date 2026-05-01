@@ -123,8 +123,13 @@ With `use_rviz:=true`, RViz subscribes to
 `/input/points`, `/debug/points_filtered`, `/debug/clusters`, and
 `/vehicle_markers` against `Fixed Frame: map`. Recorded outputs and
 counts are summarized in [`docs/results.md`](docs/results.md).
-A captured screenshot belongs alongside that document; the run is
-fully reproducible via `./tools/run_demo.sh data/pcd/sample.pcd`.
+
+![RViz demo: vehicle detections (green bounding boxes) overlaid on the filtered PandaSet point cloud](docs/images/rviz_demo_20260501_225537.png)
+
+The screenshot above was captured from a live run of
+`./tools/run_demo.sh data/pcd/sample.pcd` with `use_rviz:=true`. Green
+markers are `/vehicle_markers` (passenger-vehicle AABBs); the colored
+points are `/debug/points_filtered`.
 
 ## Browser GUI
 

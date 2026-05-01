@@ -53,6 +53,10 @@ All notable changes to this project will be documented in this file.
 - `docs/images/architecture.svg`: rendered architecture diagram for
   the PCD loader, detector, RViz, topic relay, and HTTP JSON output
   flow.
+- `docs/images/rviz_demo_20260501_225537.png`: RViz demo screenshot
+  showing `/vehicle_markers` (green AABBs) on top of
+  `/debug/points_filtered` for the PandaSet sample. Embedded in
+  `README.md` and `docs/results.md`.
 - Initial requirements, design notes, and pre-coding checklist.
 - Initial detector, dataset, and transform parameter files.
 - Git ignore rules for ROS 2 build outputs and large point cloud data.
@@ -159,4 +163,4 @@ All notable changes to this project will be documented in this file.
 
 ### Planned
 
-- Demo screenshot or GIF for `docs/`.
+- (none)
