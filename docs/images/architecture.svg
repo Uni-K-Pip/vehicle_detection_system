@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-labelledby="title desc">
+  <title id="title">Vehicle Detection System Architecture</title>
+  <desc id="desc">ROS 2 pipeline from a PCD point cloud through loader, detector, sender, RViz, topic output, and HTTP JSON output.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#344054"/>
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .lane { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; }
+      .lane-title { fill: #475467; font: 700 18px Arial, sans-serif; }
+      .box { fill: #ffffff; stroke: #667085; stroke-width: 2; rx: 8; ry: 8; }
+      .input { fill: #ecfdf3; stroke: #16a34a; }
+      .node { fill: #eef4ff; stroke: #2563eb; }
+      .process { fill: #fff7ed; stroke: #f97316; }
+      .output { fill: #fdf2f8; stroke: #db2777; }
+      .config { fill: #f4f3ff; stroke: #7c3aed; }
+      .rviz { fill: #eff6ff; stroke: #0284c7; }
+      .label { fill: #101828; font: 700 19px Arial, sans-serif; }
+      .small { fill: #344054; font: 15px Arial, sans-serif; }
+      .mono { fill: #344054; font: 14px "Consolas", "Courier New", monospace; }
+      .topic { fill: #0f172a; font: 700 14px "Consolas", "Courier New", monospace; }
+      .arrow { stroke: #344054; stroke-width: 2.4; fill: none; marker-end: url(#arrow); }
+      .dash { stroke-dasharray: 8 6; }
+      .muted { fill: #667085; font: 13px Arial, sans-serif; }
+      .title { fill: #101828; font: 700 30px Arial, sans-serif; }
+      .subtitle { fill: #475467; font: 16px Arial, sans-serif; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1280" height="760"/>
+  <text class="title" x="40" y="54">Vehicle Detection System Architecture</text>
+  <text class="subtitle" x="40" y="82">ROS 2 Jazzy / C++ / PCL pipeline with RViz visualization and optional HTTP JSON output</text>
+
+  <rect class="lane" x="40" y="118" width="295" height="552" rx="10"/>
+  <text class="lane-title" x="64" y="150">Input</text>
+
+  <rect class="lane" x="365" y="118" width="430" height="552" rx="10"/>
+  <text class="lane-title" x="389" y="150">Detection Pipeline</text>
+
+  <rect class="lane" x="825" y="118" width="415" height="552" rx="10"/>
+  <text class="lane-title" x="849" y="150">Outputs</text>
+
+  <rect class="box input" x="72" y="186" width="230" height="92"/>
+  <text class="label" x="96" y="221">PCD file</text>
+  <text class="mono" x="96" y="248">data/pcd/sample.pcd</text>
+
+  <rect class="box node" x="72" y="348" width="230" height="108"/>
+  <text class="label" x="96" y="385">pcd_loader_node</text>
+  <text class="small" x="96" y="414">load PCD via PCL</text>
+  <text class="small" x="96" y="438">publish PointCloud2</text>
+
+  <rect class="box config" x="72" y="532" width="230" height="84"/>
+  <text class="label" x="96" y="566">Launch + YAML</text>
+  <text class="mono" x="96" y="593">detector_params.yaml</text>
+
+  <rect class="box node" x="397" y="185" width="250" height="104"/>
+  <text class="label" x="421" y="221">vehicle_detector_node</text>
+  <text class="small" x="421" y="250">subscribe /input/points</text>
+
+  <rect class="box process" x="397" y="355" width="250" height="218"/>
+  <text class="label" x="421" y="392">PCL processing</text>
+  <text class="small" x="421" y="423">1. tf2 to target frame</text>
+  <text class="small" x="421" y="450">2. VoxelGrid downsample</text>
+  <text class="small" x="421" y="477">3. ROI CropBox</text>
+  <text class="small" x="421" y="504">4. RANSAC ground removal</text>
+  <text class="small" x="421" y="531">5. Euclidean clustering</text>
+  <text class="small" x="421" y="558">6. AABB + size filter</text>
+
+  <rect class="box config" x="680" y="348" width="82" height="116"/>
+  <text class="label" x="700" y="387">TF</text>
+  <text class="mono" x="697" y="415">lidar</text>
+  <text class="mono" x="704" y="440">map</text>
+
+  <rect class="box output" x="860" y="170" width="332" height="98"/>
+  <text class="label" x="884" y="207">/vehicle_detections/raw</text>
+  <text class="small" x="884" y="236">vision_msgs/Detection3DArray</text>
+
+  <rect class="box node" x="860" y="315" width="332" height="108"/>
+  <text class="label" x="884" y="352">detection_sender_node</text>
+  <text class="small" x="884" y="381">bounded queue + worker thread</text>
+  <text class="small" x="884" y="405">send_mode: topic / HTTP / both</text>
+
+  <rect class="box output" x="860" y="488" width="332" height="58"/>
+  <text class="label" x="884" y="520">ROS topic relay</text>
+  <text class="topic" x="884" y="540">/vehicle_detections</text>
+
+  <rect class="box output" x="860" y="558" width="332" height="58"/>
+  <text class="label" x="884" y="590">HTTP POST</text>
+  <text class="mono" x="884" y="610">JSON payload to http_endpoint_url</text>
+
+  <rect class="box rviz" x="860" y="625" width="332" height="42"/>
+  <text class="label" x="884" y="645">RViz2 visualization</text>
+  <text class="small" x="884" y="662">input cloud, debug clouds, bbox markers</text>
+
+  <path class="arrow" d="M187 278 L187 348"/>
+  <path class="arrow" d="M302 402 L397 237"/>
+  <text class="topic" x="315" y="302">/input/points</text>
+
+  <path class="arrow" d="M522 289 L522 355"/>
+  <path class="arrow" d="M647 464 C700 464 760 285 860 219"/>
+  <path class="arrow" d="M647 237 L860 219"/>
+  <path class="arrow" d="M647 531 C720 570 787 646 860 646"/>
+  <text class="topic" x="672" y="292">/vehicle_detections/raw</text>
+  <text class="topic" x="690" y="604">debug markers / point clouds</text>
+
+  <path class="arrow" d="M1026 268 L1026 315"/>
+  <path class="arrow" d="M968 423 L968 488"/>
+  <path class="arrow" d="M1084 423 C1134 462 1134 523 1084 558"/>
+
+  <path class="arrow dash" d="M302 574 C345 574 348 548 397 548"/>
+  <path class="arrow dash" d="M302 574 C496 640 641 494 680 420"/>
+  <text class="muted" x="326" y="642">launch arguments and parameter files configure nodes and frames</text>
+</svg>

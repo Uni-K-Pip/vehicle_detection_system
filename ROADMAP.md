@@ -17,7 +17,7 @@ This roadmap tracks the growth of `vehicle_detection_system` as a portfolio proj
 - [x] Add `package.xml`
 - [x] Add `CMakeLists.txt`
 - [x] Add launch and config install rules
-- [ ] Confirm `colcon build` succeeds
+- [x] Confirm `colcon build` succeeds
 
 ## v0.3.0 - PCD Loader
 
@@ -30,43 +30,53 @@ This roadmap tracks the growth of `vehicle_detection_system` as a portfolio proj
 
 ## v0.4.0 - Vehicle Candidate Detection
 
-- [ ] Implement PCL preprocessing
-- [ ] Add voxel downsampling
-- [ ] Add ROI cropping
-- [ ] Add ground removal
-- [ ] Add Euclidean clustering
-- [ ] Compute 3D bounding boxes
-- [ ] Publish `vision_msgs/msg/Detection3DArray`
-- [ ] Publish RViz markers
+- [x] Implement PCL preprocessing
+- [x] Add voxel downsampling
+- [x] Add ROI cropping
+- [x] Add ground removal
+- [x] Add Euclidean clustering
+- [x] Compute 3D bounding boxes
+- [x] Publish `vision_msgs/msg/Detection3DArray`
+- [x] Publish RViz markers
 
 ## v0.5.0 - Launch and Visualization
 
-- [ ] Add `vehicle_detection.launch.py`
-- [ ] Add static transform setup
-- [ ] Add RViz config
-- [ ] Confirm `/vehicle_detections` output
-- [ ] Capture demo screenshot or GIF
+- [x] Add `vehicle_detection.launch.py`
+- [x] Add static transform setup
+- [x] Add RViz config
+- [x] Confirm `/vehicle_detections` output
+- [ ] Capture demo screenshot or GIF (manual: launch with
+      `use_rviz:=true`; recorded numbers and frame contents are
+      already in `docs/results.md` and `docs/topic_echo.md`)
 
 ## v0.6.0 - Tests and Quality
 
-- [ ] Add unit tests for parameter validation
-- [ ] Add unit tests for point cloud processing helpers
-- [ ] Add basic launch verification
-- [ ] Document `colcon test` results
+- [x] Add unit tests for parameter validation
+- [x] Add unit tests for point cloud processing helpers
+- [x] Add basic launch verification
+- [x] Document `colcon test` results
 
 ## v0.7.0 - External Output
 
-- [ ] Implement `detection_sender_node`
-- [ ] Add `send_mode` switching
-- [ ] Add HTTP JSON POST
-- [ ] Add a small local receiver example
-- [ ] Document payload schema
+- [x] Implement `detection_sender_node`
+- [x] Add `send_mode` switching
+- [x] Add HTTP JSON POST
+- [x] Add a small local receiver example
+- [x] Document payload schema
 
 ## v1.0.0 - Portfolio MVP
 
-- [ ] Provide a reproducible Docker-based setup
-- [ ] Provide one-command launch instructions
-- [ ] Provide RViz demo image
-- [ ] Provide topic echo example
-- [ ] Provide tests and known limitations
-- [ ] Confirm no large data files or local notes are tracked
+- [x] Provide a reproducible Docker-based setup
+      (`Dockerfile` based on `osrf/ros:jazzy-desktop`)
+- [x] Provide one-command launch instructions
+      (`./tools/run_demo.sh`, also documented in README)
+- [ ] Provide RViz demo image (manual capture step; pipeline and
+      RViz config are reproducible)
+- [x] Provide architecture diagram image
+      (`docs/images/architecture.svg`)
+- [x] Provide topic echo example (`docs/topic_echo.md`)
+- [x] Provide tests and known limitations (`docs/results.md`,
+      `docs/limitations.md`; 117 tests, 0 failures)
+- [x] Confirm no large data files or local notes are tracked
+      (`.gitignore` covers PCDs, `data/pcd/PandasetLidarData/`,
+      build artifacts, and `*_LOCAL.md` notes)

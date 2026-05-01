@@ -9,6 +9,9 @@ log/
 data/pcd/*.pcd
 data/pcd/**/*.pcd
 data/pandaset_lidar_pcd_subset/
+# PandaSet dataset directory contains large .mat / metadata blobs that
+# must not be republished from this repository.
+data/pcd/PandasetLidarData/
 
 # Large downloaded archives and extracted datasets
 *.zip
@@ -42,3 +45,5 @@ Thumbs.db
 # Local notes that should not be published from this repo
 *_LOCAL.md
 *.local.md
+docs/portfolio_strategy.md
+docs/strategy_audit.md
