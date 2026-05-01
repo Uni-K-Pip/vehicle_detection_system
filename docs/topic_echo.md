@@ -1,9 +1,8 @@
-# Topic Echo Examples
+# トピック echo の実行例
 
-These outputs were captured from a live run of
-`vehicle_detection.launch.py` against
-`data/pcd/PandasetLidarData/Lidar/0001.pcd` inside the
-`osrf/ros:jazzy-desktop` Docker image.
+ここに示す出力は、`osrf/ros:jazzy-desktop` Docker イメージ内で
+`data/pcd/PandasetLidarData/Lidar/0001.pcd` に対して
+`vehicle_detection.launch.py` をライブ実行した際に取得したもの。
 
 ## ros2 topic list
 
@@ -30,7 +29,7 @@ Publisher count: 1
 Subscription count: 1
 ```
 
-## /vehicle_detections/raw — first detection in a frame
+## /vehicle_detections/raw — フレーム内の先頭検知
 
 ```
 $ ros2 topic echo --once /vehicle_detections/raw
@@ -56,12 +55,12 @@ detections:
 - ...  # 6 more detections in this frame
 ```
 
-`bbox.size` reports raw axis-aligned extents (`dx`, `dy`, `dz`); the
-JSON payload sent by `detection_sender_node` reorders these into
-semantic length / width / height (see
-[`payload_schema.md`](payload_schema.md)).
+`bbox.size` は生の軸並行寸法 (`dx`、`dy`、`dz`) を返す。
+`detection_sender_node` が送信する JSON ペイロードでは、これらを
+意味付きの length / width / height に並べ替える
+([`payload_schema.md`](payload_schema.md) 参照)。
 
-## /vehicle_detections/raw — message rate
+## /vehicle_detections/raw — メッセージ周期
 
 ```
 $ ros2 topic hz /vehicle_detections/raw
@@ -69,7 +68,7 @@ average rate: 1.000
         min: 0.994s max: 1.006s std dev: 0.00413s window: 5
 ```
 
-This matches `pcd_loader_node`'s default `publish_rate_hz: 1.0`.
+これは `pcd_loader_node` の既定値 `publish_rate_hz: 1.0` に一致する。
 
 ## /vehicle_markers
 
@@ -78,13 +77,14 @@ $ ros2 topic echo --once /vehicle_markers --no-arr
 markers: '<sequence type: visualization_msgs/msg/Marker, length: 8>'
 ```
 
-The marker array contains 7 cube markers (one per detection) plus a
-`DELETEALL` marker so RViz clears stale boxes between frames.
+このマーカー配列は、検知 1 件ごとの cube マーカー 7 個と、
+RViz がフレーム間で古い box を消すための `DELETEALL` マーカー 1 個で
+構成される。
 
 ## QoS
 
-`/vehicle_detections/raw` and `/vehicle_detections` use
-`KeepLast(10) + RELIABLE + VOLATILE`:
+`/vehicle_detections/raw` と `/vehicle_detections` は
+`KeepLast(10) + RELIABLE + VOLATILE` を使用する:
 
 ```
 $ ros2 topic info /vehicle_detections/raw -v

@@ -1,9 +1,9 @@
-# HTTP Payload Schema
+# HTTP ペイロードスキーマ
 
-`detection_sender_node` POSTs the following JSON body to
-`http_endpoint_url` whenever `send_mode` is `http` or `both`. Each POST
-corresponds to a single `vision_msgs/msg/Detection3DArray` message
-received on `raw_detections_topic`.
+`detection_sender_node` は、`send_mode` が `http` または `both` のとき、
+以下の JSON ボディを `http_endpoint_url` に POST する。1 回の POST は、
+`raw_detections_topic` で受信した 1 件の
+`vision_msgs/msg/Detection3DArray` メッセージに対応する。
 
 ```
 POST {http_endpoint_url}
@@ -37,18 +37,17 @@ Content-Type: application/json
 }
 ```
 
-## Notes
+## 補足
 
-- `detections` may be an empty array if the upstream
-  `vehicle_detector_node` produced no passenger-vehicle candidates for
-  the current frame.
-- Numeric fields use 6-digit fixed precision; non-finite values are
-  serialized as `0.0`.
-- `class` and `confidence` reflect the first
-  `ObjectHypothesisWithPose` in `Detection3D.results`. The MVP
-  hard-codes `class=car` and `confidence=0.8`.
-- `yaw` is currently always `0.0`; AABB orientation estimation is out
-  of scope for the MVP.
-- The sender expects any 2xx response. A non-2xx, a network error, or a
-  timeout is logged but does not block the ROS callback (sending runs
-  on a background worker thread with a bounded queue of 32 payloads).
+- 上流の `vehicle_detector_node` がそのフレームで普通車候補を出さなかった
+  場合、`detections` は空配列になりうる。
+- 数値フィールドは 6 桁の固定精度。非有限値 (NaN / Inf) は `0.0` として
+  シリアライズする。
+- `class` と `confidence` は、`Detection3D.results` の先頭
+  `ObjectHypothesisWithPose` を反映する。MVP では `class=car`、
+  `confidence=0.8` をハードコードしている。
+- `yaw` は現状常に `0.0`。AABB の姿勢推定は MVP のスコープ外。
+- 送信側は 2xx 応答を期待する。2xx 以外、ネットワークエラー、
+  タイムアウトはログに記録するが、ROS コールバックはブロックしない
+  (送信は最大 32 ペイロードの固定キューを持つバックグラウンドワーカー
+  スレッド上で実行される)。

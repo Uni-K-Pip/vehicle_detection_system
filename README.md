@@ -1,27 +1,24 @@
 # Vehicle Detection System
 
-ROS 2 Jazzy / C++ / PCL を使った、PCD点群ベースの普通車検知システム。
+ROS 2 Jazzy / C++ / PCL を使った、PCD 点群ベースの普通車検知システム。
 
-## Documents
+## ドキュメント
 
 - 要件定義書: [`docs/vehicle_detection_requirements.md`](docs/vehicle_detection_requirements.md)
 - 基本設計書: [`docs/vehicle_detection_design.md`](docs/vehicle_detection_design.md)
-- HTTP payload schema: [`docs/payload_schema.md`](docs/payload_schema.md)
-- Verified pipeline metrics: [`docs/results.md`](docs/results.md)
-- Live `ros2 topic echo` examples: [`docs/topic_echo.md`](docs/topic_echo.md)
-- Known limitations: [`docs/limitations.md`](docs/limitations.md)
+- HTTP ペイロードスキーマ: [`docs/payload_schema.md`](docs/payload_schema.md)
+- パイプライン実測値: [`docs/results.md`](docs/results.md)
+- `ros2 topic echo` の実行例: [`docs/topic_echo.md`](docs/topic_echo.md)
+- 既知の制約: [`docs/limitations.md`](docs/limitations.md)
 - コーディング前チェックリスト: [`docs/pre_coding_checklist.md`](docs/pre_coding_checklist.md)
 
-## Architecture
+## アーキテクチャ
 
 ![Vehicle Detection System Architecture](docs/images/architecture.svg)
 
-The diagram above summarizes the ROS 2 node flow from PCD loading
-through PCL-based vehicle detection, RViz marker output, ROS topic
-relay, and optional HTTP JSON publishing. The full design notes are in
-[`docs/vehicle_detection_design.md`](docs/vehicle_detection_design.md).
+上図は、PCD 読み込みから PCL ベースの車両検知、RViz マーカー出力、ROS トピックリレー、任意の HTTP JSON 送信までの ROS 2 ノードフローをまとめたもの。設計の詳細は [`docs/vehicle_detection_design.md`](docs/vehicle_detection_design.md) を参照。
 
-## Layout
+## ディレクトリ構成
 
 ```text
 vehicle_detection_system/
@@ -29,10 +26,10 @@ vehicle_detection_system/
   ROADMAP.md
   CHANGELOG.md
   LICENSE
-  Dockerfile                # reproducible build image (osrf/ros:jazzy-desktop)
-  data/pcd/                 # PCD files placed at runtime (not committed)
-  docs/                     # requirements, design, results, schemas, limits, images
-  src/vehicle_detection/    # ament_cmake ROS 2 package
+  Dockerfile                # 再現可能なビルドイメージ (osrf/ros:jazzy-desktop)
+  data/pcd/                 # 実行時に配置する PCD ファイル (リポジトリには含めない)
+  docs/                     # 要件・設計・結果・スキーマ・制約・図版
+  src/vehicle_detection/    # ament_cmake ROS 2 パッケージ
     package.xml
     CMakeLists.txt
     include/vehicle_detection/
@@ -42,24 +39,21 @@ vehicle_detection_system/
     rviz/                   # vehicle_detection.rviz
     test/
   tools/
-    run_demo.sh             # one-command build + launch
-    receive_detections.py   # local HTTP receiver for the JSON payload
+    run_demo.sh             # ビルドと launch を 1 コマンドで実行
+    receive_detections.py   # JSON ペイロード受信用のローカル HTTP レシーバ
 ```
 
-## Quick Start (Docker)
+## クイックスタート (Docker)
 
-The reference environment is `osrf/ros:jazzy-desktop`. The bundled
-[`Dockerfile`](Dockerfile) installs the additional ROS 2 packages
-needed by this repo (`vision_msgs`, `tf2_sensor_msgs`,
-`colcon-common-extensions`).
+リファレンス環境は `osrf/ros:jazzy-desktop`。同梱の [`Dockerfile`](Dockerfile) は本リポジトリで必要な追加 ROS 2 パッケージ (`vision_msgs`、`tf2_sensor_msgs`、`colcon-common-extensions`) をインストールする。
 
 ```bash
-# 1) build the image
+# 1) イメージをビルド
 docker build -t vehicle_detection:dev .
 
-# 2) place a PCD at data/pcd/sample.pcd (see data/pcd/README.md)
+# 2) data/pcd/sample.pcd に PCD を配置 (data/pcd/README.md を参照)
 
-# 3) launch the pipeline (one command)
+# 3) パイプラインを起動 (1 コマンド)
 docker run --rm -it \
   -v "$PWD":/workspace/vehicle_detection_system \
   -w /workspace/vehicle_detection_system \
@@ -67,14 +61,12 @@ docker run --rm -it \
   ./tools/run_demo.sh data/pcd/sample.pcd
 ```
 
-`run_demo.sh` sources ROS 2, runs `colcon build --merge-install
---packages-select vehicle_detection`, sources the install space, and
-launches `vehicle_detection.launch.py`.
+`run_demo.sh` は ROS 2 を source し、`colcon build --merge-install --packages-select vehicle_detection` を実行し、install スペースを source した上で `vehicle_detection.launch.py` を起動する。
 
-## Quick Start (host ROS 2)
+## クイックスタート (ホスト側 ROS 2)
 
 ```bash
-# inside a ROS 2 Jazzy environment, from this repo root:
+# ROS 2 Jazzy 環境上で、本リポジトリのルートから:
 colcon build --merge-install --packages-select vehicle_detection
 source install/setup.bash
 
@@ -82,7 +74,7 @@ ros2 launch vehicle_detection vehicle_detection.launch.py \
   pcd_file:=data/pcd/sample.pcd
 ```
 
-Override behaviour with launch args:
+挙動は launch 引数で上書きできる:
 
 ```bash
 ros2 launch vehicle_detection vehicle_detection.launch.py \
@@ -95,15 +87,9 @@ ros2 launch vehicle_detection vehicle_detection.launch.py \
   use_gui:=true
 ```
 
-`use_sender:=true` adds `detection_sender_node` (republish on
-`/vehicle_detections` and / or POST JSON per
-[`docs/payload_schema.md`](docs/payload_schema.md)). `use_rviz:=true`
-opens RViz with the bundled config in
-`src/vehicle_detection/rviz/vehicle_detection.rviz`. `use_gui:=true`
-(default) starts `parameter_bridge_node` for runtime parameter tuning;
-see [Browser GUI](#browser-gui).
+`use_sender:=true` を指定すると `detection_sender_node` が追加され、`/vehicle_detections` への再パブリッシュおよび／または [`docs/payload_schema.md`](docs/payload_schema.md) に沿った JSON の POST を行う。`use_rviz:=true` で `src/vehicle_detection/rviz/vehicle_detection.rviz` を読み込んだ RViz が起動する。`use_gui:=true` (既定) は実行時パラメータ調整用の `parameter_bridge_node` を起動する。詳細は [ブラウザ GUI](#ブラウザ-gui) を参照。
 
-## Confirming the pipeline
+## パイプラインの確認
 
 ```bash
 ros2 topic list
@@ -113,51 +99,38 @@ ros2 topic echo --once /vehicle_detections/raw
 ros2 topic hz /vehicle_detections/raw
 ```
 
-A captured run with the PandaSet sample is recorded in
-[`docs/topic_echo.md`](docs/topic_echo.md) and
-[`docs/results.md`](docs/results.md).
+PandaSet サンプルを使った実行ログは [`docs/topic_echo.md`](docs/topic_echo.md) と [`docs/results.md`](docs/results.md) に記録している。
 
-## RViz demo
+## RViz デモ
 
-With `use_rviz:=true`, RViz subscribes to
-`/input/points`, `/debug/points_filtered`, `/debug/clusters`, and
-`/vehicle_markers` against `Fixed Frame: map`. Recorded outputs and
-counts are summarized in [`docs/results.md`](docs/results.md).
+`use_rviz:=true` を指定すると、RViz は `Fixed Frame: map` の状態で `/input/points`、`/debug/points_filtered`、`/debug/clusters`、`/vehicle_markers` を購読する。記録済みの出力と件数は [`docs/results.md`](docs/results.md) にまとめている。
 
-![RViz demo: vehicle detections (green bounding boxes) overlaid on the filtered PandaSet point cloud](docs/images/rviz_demo_20260501_225537.png)
+![RViz デモ: フィルタ済み PandaSet 点群に車両検知 (緑のバウンディングボックス) を重ねた様子](docs/images/rviz_demo_20260501_225537.png)
 
-The screenshot above was captured from a live run of
-`./tools/run_demo.sh data/pcd/sample.pcd` with `use_rviz:=true`. Green
-markers are `/vehicle_markers` (passenger-vehicle AABBs); the colored
-points are `/debug/points_filtered`.
+上のスクリーンショットは `./tools/run_demo.sh data/pcd/sample.pcd` を `use_rviz:=true` で実行したライブ実行から取得した。緑のマーカーは `/vehicle_markers` (普通車の AABB)、色付き点群は `/debug/points_filtered`。
 
-## Browser GUI
+## ブラウザ GUI
 
-`parameter_bridge_node` exposes a small Web UI for tuning ROS 2 parameters
-at runtime. The HTTP API is unauthenticated, so it binds to loopback
-(`127.0.0.1:8081`) by default and is reachable only from the same machine.
+`parameter_bridge_node` は、実行時に ROS 2 パラメータを調整するための小さな Web UI を提供する。HTTP API は認証を持たないため、既定ではループバック (`127.0.0.1:8081`) にバインドし、同一マシンからのみ到達可能としている。
 
 ```bash
-# stop the GUI for a launch run:
+# 起動時に GUI を無効化する:
 ros2 launch vehicle_detection vehicle_detection.launch.py use_gui:=false
 ```
 
-To expose the GUI from a Docker container to the Windows host, both bind
-on `0.0.0.0` and publish the port:
+Docker コンテナから Windows ホストへ GUI を公開する場合は、バインド先を `0.0.0.0` にしてポートを公開する:
 
 ```bash
-# inside the container
+# コンテナ内:
 ros2 launch vehicle_detection vehicle_detection.launch.py gui_host:=0.0.0.0
 
-# when starting the container, publish the port:
+# コンテナ起動時にポートを公開:
 docker run -p 8081:8081 ...
 ```
 
-`gui_port` and `host` are also settable through `detector_params.yaml` or
-`ros2 param set /parameter_bridge_node host 0.0.0.0` if preferred. Treat
-non-loopback bindings as a deliberate exposure of runtime parameter writes.
+`gui_port` と `host` は `detector_params.yaml`、または `ros2 param set /parameter_bridge_node host 0.0.0.0` でも設定できる。ループバック以外へのバインドは、実行時パラメータ書き込みを意図的に外部公開する操作として扱うこと。
 
-HTTP API exposed by the bridge:
+ブリッジが公開する HTTP API:
 
 | Method | Path              | Body / Response                                                |
 | ------ | ----------------- | -------------------------------------------------------------- |
@@ -166,37 +139,27 @@ HTTP API exposed by the bridge:
 | GET    | `/api/parameters` | `{ ok, nodes: [{ name, available, parameters }] }`             |
 | POST   | `/api/parameters` | `{ node, parameters: { ... } }` -> `{ ok, updated, rejected }` |
 
-Implementation libraries: [cpp-httplib](https://github.com/yhirose/cpp-httplib)
-(MIT; CMake uses a system `httplib >= 0.27.0` when available, otherwise
-fetches pinned upstream `v0.28.0`) and
-[nlohmann/json](https://github.com/nlohmann/json) (MIT, rosdep key
-`nlohmann-json-dev`).
+実装ライブラリ: [cpp-httplib](https://github.com/yhirose/cpp-httplib) (MIT。CMake はシステムの `httplib >= 0.27.0` が利用可能ならそれを使い、無い場合は upstream の `v0.28.0` を pin して取得する) と [nlohmann/json](https://github.com/nlohmann/json) (MIT、rosdep キーは `nlohmann-json-dev`)。
 
-## Tests
+## テスト
 
 ```bash
 colcon test --merge-install --packages-select vehicle_detection
 colcon test-result --verbose --test-result-base build/vehicle_detection
 ```
 
-Latest recorded full ROS 2 run before the browser GUI addition:
-**117 tests, 0 errors, 0 failures, 14 skipped** (see
-[`docs/results.md`](docs/results.md)). The GUI adds
-`test_parameter_json`; rerun `colcon test` in Jazzy before publishing
-fresh counts.
+ブラウザ GUI 追加前の最新フル ROS 2 実行記録は **117 tests, 0 errors, 0 failures, 14 skipped** ([`docs/results.md`](docs/results.md) を参照)。GUI 追加で `test_parameter_json` が増えているため、新しい数値を公開する際は Jazzy 上で `colcon test` を再実行すること。
 
-## Initial Decisions
+## 初期決定事項
 
-- 初期データセット: PandaSet由来のPCDサブセット
+- 初期データセット: PandaSet 由来の PCD サブセット
 - 入力座標系: `lidar`
 - 出力座標系: `map`
-- `lidar -> map`未指定時: identity transform
+- `lidar -> map` 未指定時: identity transform
 - 検知対象: 普通車のみ
-- 検知情報送信: ROS 2 topic / HTTP POST / both / disabled を設定で切替
-- GUI: Qt/rqtを使わないブラウザベースUI
+- 検知情報送信: ROS 2 topic / HTTP POST / both / disabled を設定で切り替え
+- GUI: Qt/rqt を使わないブラウザベース UI
 
-## Known Limitations
+## 既知の制約
 
-See [`docs/limitations.md`](docs/limitations.md) for the full list
-(single-frame geometric detector, identity orientation, HTTP-only
-sender, 1 Hz / 150 ms per-frame target, etc.).
+詳細は [`docs/limitations.md`](docs/limitations.md) を参照 (単一フレームの幾何検知器、identity orientation、HTTP のみの送信、1 Hz / 150 ms per-frame の目標値など)。

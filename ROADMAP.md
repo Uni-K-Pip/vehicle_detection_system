@@ -1,92 +1,92 @@
-# Roadmap
+# ロードマップ
 
-This roadmap tracks the growth of `vehicle_detection_system` as a portfolio project.
+本ロードマップは、ポートフォリオプロジェクトとしての `vehicle_detection_system` の成長を追跡するためのもの。
 
-## v0.1.0 - Design Baseline
+## v0.1.0 - 設計ベースライン
 
-- [x] Define requirements for a ROS 2 / C++ / PCL based vehicle detection MVP
-- [x] Define initial node responsibilities
-- [x] Define ROS 2 topics and message types
-- [x] Define detector parameters
-- [x] Define initial dataset and PCD placement policy
-- [x] Prepare Git tracking files
+- [x] ROS 2 / C++ / PCL ベースの車両検知 MVP の要件を定義する
+- [x] 初期ノードの責務を定義する
+- [x] ROS 2 トピックとメッセージ型を定義する
+- [x] 検知器パラメータを定義する
+- [x] 初期データセットと PCD 配置ポリシーを定義する
+- [x] Git 追跡用ファイルを整備する
 
-## v0.2.0 - ROS 2 Package Scaffold
+## v0.2.0 - ROS 2 パッケージひな形
 
-- [x] Create `src/vehicle_detection` as an `ament_cmake` package
-- [x] Add `package.xml`
-- [x] Add `CMakeLists.txt`
-- [x] Add launch and config install rules
-- [x] Confirm `colcon build` succeeds
+- [x] `ament_cmake` パッケージとして `src/vehicle_detection` を作成する
+- [x] `package.xml` を追加する
+- [x] `CMakeLists.txt` を追加する
+- [x] launch と config の install ルールを追加する
+- [x] `colcon build` が成功することを確認する
 
-## v0.3.0 - PCD Loader
+## v0.3.0 - PCD ローダー
 
-- [x] Implement `pcd_loader_node`
-- [x] Load a configured PCD file
-- [x] Publish `sensor_msgs/msg/PointCloud2` to `/input/points`
-- [x] Support one-shot and periodic publishing
-- [x] Add error handling for missing or invalid PCD files
-- [x] Add `vehicle_detection.launch.py` with static `target_frame_id` -> `input_frame_id` transform
+- [x] `pcd_loader_node` を実装する
+- [x] 設定された PCD ファイルを読み込む
+- [x] `sensor_msgs/msg/PointCloud2` を `/input/points` に publish する
+- [x] one-shot と周期 publish の両方をサポートする
+- [x] PCD ファイルが存在しない／不正な場合のエラー処理を追加する
+- [x] `target_frame_id` -> `input_frame_id` の static transform を持つ `vehicle_detection.launch.py` を追加する
 
-## v0.4.0 - Vehicle Candidate Detection
+## v0.4.0 - 車両候補の検知
 
-- [x] Implement PCL preprocessing
-- [x] Add voxel downsampling
-- [x] Add ROI cropping
-- [x] Add ground removal
-- [x] Add Euclidean clustering
-- [x] Compute 3D bounding boxes
-- [x] Publish `vision_msgs/msg/Detection3DArray`
-- [x] Publish RViz markers
+- [x] PCL の前処理を実装する
+- [x] voxel ダウンサンプリングを追加する
+- [x] ROI クロップを追加する
+- [x] 地面除去を追加する
+- [x] ユークリッドクラスタリングを追加する
+- [x] 3D バウンディングボックスを計算する
+- [x] `vision_msgs/msg/Detection3DArray` を publish する
+- [x] RViz マーカーを publish する
 
-## v0.5.0 - Launch and Visualization
+## v0.5.0 - launch と可視化
 
-- [x] Add `vehicle_detection.launch.py`
-- [x] Add static transform setup
-- [x] Add RViz config
-- [x] Confirm `/vehicle_detections` output
-- [x] Capture demo screenshot or GIF
-      (`docs/images/rviz_demo_20260501_225537.png`, embedded in
-      `README.md` and `docs/results.md`)
+- [x] `vehicle_detection.launch.py` を追加する
+- [x] static transform の設定を追加する
+- [x] RViz コンフィグを追加する
+- [x] `/vehicle_detections` の出力を確認する
+- [x] デモ用スクリーンショットまたは GIF を撮影する
+      (`docs/images/rviz_demo_20260501_225537.png` を `README.md` と
+      `docs/results.md` に埋め込み)
 
-## v0.6.0 - Tests and Quality
+## v0.6.0 - テストと品質
 
-- [x] Add unit tests for parameter validation
-- [x] Add unit tests for point cloud processing helpers
-- [x] Add basic launch verification
-- [x] Document `colcon test` results
+- [x] パラメータ検証の単体テストを追加する
+- [x] 点群処理ヘルパーの単体テストを追加する
+- [x] 基本的な launch 確認を追加する
+- [x] `colcon test` の結果を記録する
 
-## v0.7.0 - External Output
+## v0.7.0 - 外部出力
 
-- [x] Implement `detection_sender_node`
-- [x] Add `send_mode` switching
-- [x] Add HTTP JSON POST
-- [x] Add a small local receiver example
-- [x] Document payload schema
+- [x] `detection_sender_node` を実装する
+- [x] `send_mode` 切り替えを追加する
+- [x] HTTP JSON POST を追加する
+- [x] 小さなローカル受信サンプルを追加する
+- [x] ペイロードスキーマを文書化する
 
-## v0.7.x - Browser GUI Parameter Bridge
+## v0.7.x - ブラウザ GUI パラメータブリッジ
 
-- [x] Implement `parameter_bridge_node` (HTTP server)
-- [x] Serve static `parameter_gui.html` at `/`
-- [x] Expose `GET /api/health`
-- [x] Expose `GET /api/parameters` for the configured target nodes
-- [x] Expose `POST /api/parameters` with type-aware coercion
-- [x] Add `use_gui` launch argument
-- [x] Add unit tests for `parameter_json` round-trips
+- [x] `parameter_bridge_node` (HTTP サーバ) を実装する
+- [x] `/` で静的 `parameter_gui.html` を配信する
+- [x] `GET /api/health` を公開する
+- [x] 設定対象ノードに対する `GET /api/parameters` を公開する
+- [x] 型変換付き `POST /api/parameters` を公開する
+- [x] `use_gui` launch 引数を追加する
+- [x] `parameter_json` の往復変換に対する単体テストを追加する
 
-## v1.0.0 - Portfolio MVP
+## v1.0.0 - ポートフォリオ MVP
 
-- [x] Provide a reproducible Docker-based setup
-      (`Dockerfile` based on `osrf/ros:jazzy-desktop`)
-- [x] Provide one-command launch instructions
-      (`./tools/run_demo.sh`, also documented in README)
-- [x] Provide RViz demo image
+- [x] Docker ベースで再現可能なセットアップを提供する
+      (`osrf/ros:jazzy-desktop` をベースとした `Dockerfile`)
+- [x] 1 コマンドで起動できる手順を提供する
+      (`./tools/run_demo.sh`、README にも記載)
+- [x] RViz デモ画像を提供する
       (`docs/images/rviz_demo_20260501_225537.png`)
-- [x] Provide architecture diagram image
+- [x] アーキテクチャ図を提供する
       (`docs/images/architecture.svg`)
-- [x] Provide topic echo example (`docs/topic_echo.md`)
-- [x] Provide tests and known limitations (`docs/results.md`,
-      `docs/limitations.md`; 117 tests, 0 failures)
-- [x] Confirm no large data files or local notes are tracked
-      (`.gitignore` covers PCDs, `data/pcd/PandasetLidarData/`,
-      build artifacts, and `*_LOCAL.md` notes)
+- [x] トピック echo の実行例を提供する (`docs/topic_echo.md`)
+- [x] テストと既知の制約を提供する (`docs/results.md`、
+      `docs/limitations.md`。117 tests、0 failures)
+- [x] 大きなデータファイルやローカルメモが追跡されていないことを確認する
+      (`.gitignore` で PCD、`data/pcd/PandasetLidarData/`、
+      ビルド成果物、`*_LOCAL.md` メモを除外済み)
