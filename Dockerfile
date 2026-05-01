@@ -24,6 +24,7 @@ RUN apt-get update -qq \
         python3-colcon-common-extensions \
         ros-jazzy-vision-msgs \
         ros-jazzy-tf2-sensor-msgs \
+        nlohmann-json3-dev \
         python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
