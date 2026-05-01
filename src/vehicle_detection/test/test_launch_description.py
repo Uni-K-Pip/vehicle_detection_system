@@ -63,6 +63,8 @@ def test_launch_arguments_present():
         'use_sender',
         'use_rviz',
         'rviz_config',
+        'use_gui',
+        'gui_host',
     }
     missing = expected - arg_names
     assert not missing, f'missing launch arguments: {sorted(missing)}'
@@ -82,6 +84,7 @@ def test_expected_nodes_declared():
     assert 'pcd_loader_node' in node_executables
     assert 'vehicle_detector_node' in node_executables
     assert 'detection_sender_node' in node_executables
+    assert 'parameter_bridge_node' in node_executables
     assert 'static_transform_publisher' in node_executables
     assert 'rviz2' in node_executables
 

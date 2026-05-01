@@ -20,6 +20,7 @@ data/pcd/PandasetLidarData/
 *.7z
 
 # Python cache and local tooling
+.claude/
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -43,6 +44,7 @@ Makefile
 Thumbs.db
 
 # Local notes that should not be published from this repo
+AGENTS.md
 *_LOCAL.md
 *.local.md
 docs/portfolio_strategy.md

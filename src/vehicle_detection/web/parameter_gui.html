@@ -171,7 +171,8 @@ function readInput(el) {
   if (kind === "integer") {
     const n = Number(el.value);
     if (!Number.isFinite(n)) throw new Error("not a number");
-    return Math.trunc(n);
+    if (!Number.isInteger(n)) throw new Error("expected integer");
+    return n;
   }
   if (kind === "double") {
     const n = Number(el.value);
@@ -192,7 +193,8 @@ function readInput(el) {
       return items.map(s => {
         const n = Number(s);
         if (!Number.isFinite(n)) throw new Error("not a number");
-        return Math.trunc(n);
+        if (!Number.isInteger(n)) throw new Error("expected integer");
+        return n;
       });
     }
     if (kind === "double_array") {

@@ -28,22 +28,25 @@ find_package(PCL REQUIRED COMPONENTS common io filters segmentation search)
 find_package(nlohmann_json REQUIRED)
 
 # cpp-httplib: header-only MIT-licensed HTTP server used by the
-# parameter_bridge_node Web GUI. Sourced via FetchContent so the repo
-# stays free of vendored copies.
-include(FetchContent)
-set(HTTPLIB_REQUIRE_OPENSSL OFF CACHE BOOL "" FORCE)
-set(HTTPLIB_REQUIRE_ZLIB OFF CACHE BOOL "" FORCE)
-set(HTTPLIB_REQUIRE_BROTLI OFF CACHE BOOL "" FORCE)
-set(HTTPLIB_USE_OPENSSL_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
-set(HTTPLIB_USE_ZLIB_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
-set(HTTPLIB_USE_BROTLI_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
-FetchContent_Declare(
-  cpp_httplib
-  GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
-  GIT_TAG v0.18.5
-  GIT_SHALLOW TRUE
-)
-FetchContent_MakeAvailable(cpp_httplib)
+# parameter_bridge_node Web GUI. Prefer a sufficiently new system package;
+# otherwise fetch a pinned upstream release so the repo stays unvendored.
+find_package(httplib 0.27.0 QUIET)
+if(NOT httplib_FOUND)
+  include(FetchContent)
+  set(HTTPLIB_REQUIRE_OPENSSL OFF CACHE BOOL "" FORCE)
+  set(HTTPLIB_REQUIRE_ZLIB OFF CACHE BOOL "" FORCE)
+  set(HTTPLIB_REQUIRE_BROTLI OFF CACHE BOOL "" FORCE)
+  set(HTTPLIB_USE_OPENSSL_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
+  set(HTTPLIB_USE_ZLIB_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
+  set(HTTPLIB_USE_BROTLI_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
+  FetchContent_Declare(
+    cpp_httplib
+    GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
+    GIT_TAG v0.28.0
+    GIT_SHALLOW TRUE
+  )
+  FetchContent_MakeAvailable(cpp_httplib)
+endif()
 
 # Pure parameter validation helpers and JSON / HTTP utilities (no PCL).
 add_library(vehicle_detection_core

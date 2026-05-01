@@ -111,6 +111,13 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- `cpp-httplib` resolution now requires a system `httplib >= 0.27.0`
+  or falls back to pinned upstream `v0.28.0`; the Docker image now
+  installs `git` for the CMake `FetchContent` fallback.
+- `parameter_gui.html` now rejects fractional values for integer
+  parameters instead of silently truncating them in the browser.
+- `test_launch_description.py` now verifies the `use_gui` / `gui_host`
+  launch arguments and the `parameter_bridge_node` launch action.
 - `Dockerfile` now runs `apt-get dist-upgrade` before installing
   additional ROS 2 packages so the base `osrf/ros:jazzy-desktop`
   libraries stay ABI-compatible with newly installed message packages

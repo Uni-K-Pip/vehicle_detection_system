@@ -162,7 +162,8 @@ HTTP API exposed by the bridge:
 | POST   | `/api/parameters` | `{ node, parameters: { ... } }` -> `{ ok, updated, rejected }` |
 
 Implementation libraries: [cpp-httplib](https://github.com/yhirose/cpp-httplib)
-(MIT, fetched via CMake FetchContent) and
+(MIT; CMake uses a system `httplib >= 0.27.0` when available, otherwise
+fetches pinned upstream `v0.28.0`) and
 [nlohmann/json](https://github.com/nlohmann/json) (MIT, rosdep key
 `nlohmann-json-dev`).
 
@@ -173,8 +174,11 @@ colcon test --merge-install --packages-select vehicle_detection
 colcon test-result --verbose --test-result-base build/vehicle_detection
 ```
 
-Latest run: **117 tests, 0 errors, 0 failures, 14 skipped**
-(see [`docs/results.md`](docs/results.md)).
+Latest recorded full ROS 2 run before the browser GUI addition:
+**117 tests, 0 errors, 0 failures, 14 skipped** (see
+[`docs/results.md`](docs/results.md)). The GUI adds
+`test_parameter_json`; rerun `colcon test` in Jazzy before publishing
+fresh counts.
 
 ## Initial Decisions
 

@@ -20,6 +20,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -qq \
     && apt-get dist-upgrade -y --no-install-recommends \
     && apt-get install -y --no-install-recommends \
+        git \
         python3-colcon-common-extensions \
         ros-jazzy-vision-msgs \
         ros-jazzy-tf2-sensor-msgs \
