@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vehicle Detection - Parameter GUI</title>
+<style>
+  :root {
+    --bg: #102a43;
+    --panel: #1f3251;
+    --panel-soft: #243b5e;
+    --text: #f0f4f8;
+    --muted: #9fb3c8;
+    --line: #334e68;
+    --accent: #2bb0ed;
+    --accent-soft: #5dc6f2;
+    --good: #65d6ad;
+    --bad: #ef9a9a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+                 "Hiragino Sans", "Meiryo", sans-serif; }
+  body { padding: 24px; max-width: 1100px; margin: 0 auto; }
+  header { display: flex; align-items: baseline; justify-content: space-between;
+           gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+  h1 { margin: 0; font-size: 1.4rem; letter-spacing: 0.02em; }
+  .subtitle { color: var(--muted); font-size: 0.9rem; }
+  .toolbar { display: flex; gap: 8px; align-items: center; margin: 12px 0 20px; }
+  .toolbar .health { color: var(--muted); font-size: 0.85rem; }
+  button { background: var(--accent); color: var(--bg); border: 0;
+           padding: 8px 14px; border-radius: 6px; cursor: pointer;
+           font: inherit; font-weight: 600; }
+  button:hover:not(:disabled) { background: var(--accent-soft); }
+  button.secondary { background: transparent; color: var(--text);
+                     border: 1px solid var(--line); }
+  button.secondary:hover:not(:disabled) { border-color: var(--accent-soft);
+                                          color: var(--accent-soft); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .node { background: var(--panel); border: 1px solid var(--line);
+          border-radius: 10px; padding: 16px 20px; margin-bottom: 18px; }
+  .node-head { display: flex; align-items: center; justify-content: space-between;
+               gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+  .node-title { font-size: 1.05rem; font-weight: 600; color: var(--accent-soft); }
+  .badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 999px;
+           background: var(--panel-soft); color: var(--muted);
+           border: 1px solid var(--line); margin-left: 8px;
+           vertical-align: middle; }
+  .badge.ok { background: rgba(101, 214, 173, 0.15); color: var(--good);
+              border-color: rgba(101, 214, 173, 0.4); }
+  .badge.bad { background: rgba(239, 154, 154, 0.15); color: var(--bad);
+               border-color: rgba(239, 154, 154, 0.4); }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 8px 10px;
+           border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th { font-weight: 500; color: var(--muted); font-size: 0.8rem;
+       letter-spacing: 0.04em; text-transform: uppercase; }
+  td.value { width: 38%; }
+  td.meta { color: var(--muted); font-size: 0.8rem; width: 22%; }
+  td.name { font-family: ui-monospace, "Cascadia Mono", "Consolas", monospace;
+            font-size: 0.92rem; }
+  input, select { background: #0e1f33; color: var(--text);
+                  border: 1px solid var(--line); padding: 6px 10px;
+                  border-radius: 4px; font: inherit; width: 100%; }
+  input:focus, select:focus { outline: none; border-color: var(--accent); }
+  input[type="checkbox"] { width: auto; }
+  .empty { color: var(--muted); padding: 12px 0; }
+  .error { color: var(--bad); padding: 8px 0; font-size: 0.9rem; }
+  .status { margin-top: 16px; min-height: 1.4rem; font-size: 0.9rem;
+            color: var(--muted); }
+  .status.ok { color: var(--good); }
+  .status.error { color: var(--bad); }
+  .row-actions { text-align: right; margin-top: 12px; }
+</style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Vehicle Detection - Parameter GUI</h1>
+      <div class="subtitle">ROS 2 parameter bridge for runtime tuning</div>
+    </div>
+    <div class="health" id="health">checking health...</div>
+  </header>
+  <div class="toolbar">
+    <button id="reload">Reload all</button>
+    <span class="health" id="last-loaded"></span>
+  </div>
+  <div id="nodes"></div>
+  <div class="status" id="status"></div>
+
+<script>
+"use strict";
+
+const els = {
+  nodes: document.getElementById("nodes"),
+  status: document.getElementById("status"),
+  reload: document.getElementById("reload"),
+  health: document.getElementById("health"),
+  lastLoaded: document.getElementById("last-loaded"),
+};
+
+const ARRAY_TYPES = new Set([
+  "bool_array", "integer_array", "double_array", "string_array",
+]);
+
+function setStatus(message, kind) {
+  els.status.textContent = message || "";
+  els.status.className = "status " + (kind || "");
+}
+
+function setHealth(text, kind) {
+  els.health.textContent = text;
+  els.health.className = "health" + (kind ? " " + kind : "");
+}
+
+async function fetchJson(url, options) {
+  const res = await fetch(url, options);
+  let body = null;
+  try { body = await res.json(); } catch (_) {}
+  if (!res.ok) {
+    const reason = body && body.error ? body.error : `HTTP ${res.status}`;
+    throw new Error(reason);
+  }
+  return body;
+}
+
+function inputForParameter(param) {
+  const t = param.type;
+  if (t === "bool") {
+    const el = document.createElement("input");
+    el.type = "checkbox";
+    el.checked = !!param.value;
+    el.dataset.kind = "bool";
+    return el;
+  }
+  if (t === "integer") {
+    const el = document.createElement("input");
+    el.type = "number";
+    el.step = "1";
+    el.value = String(param.value ?? 0);
+    el.dataset.kind = "integer";
+    return el;
+  }
+  if (t === "double") {
+    const el = document.createElement("input");
+    el.type = "number";
+    el.step = "any";
+    el.value = String(param.value ?? 0);
+    el.dataset.kind = "double";
+    return el;
+  }
+  if (ARRAY_TYPES.has(t)) {
+    const el = document.createElement("input");
+    el.type = "text";
+    el.value = Array.isArray(param.value) ? param.value.join(", ") : "";
+    el.placeholder = "comma-separated";
+    el.dataset.kind = t;
+    return el;
+  }
+  // string and fallthrough
+  const el = document.createElement("input");
+  el.type = "text";
+  el.value = param.value == null ? "" : String(param.value);
+  el.dataset.kind = "string";
+  return el;
+}
+
+function readInput(el) {
+  const kind = el.dataset.kind;
+  if (kind === "bool") return el.checked;
+  if (kind === "integer") {
+    const n = Number(el.value);
+    if (!Number.isFinite(n)) throw new Error("not a number");
+    return Math.trunc(n);
+  }
+  if (kind === "double") {
+    const n = Number(el.value);
+    if (!Number.isFinite(n)) throw new Error("not a number");
+    return n;
+  }
+  if (ARRAY_TYPES.has(kind)) {
+    const items = el.value.split(",")
+      .map(s => s.trim()).filter(s => s.length > 0);
+    if (kind === "bool_array") {
+      return items.map(s => {
+        if (s === "true" || s === "1") return true;
+        if (s === "false" || s === "0") return false;
+        throw new Error("expected boolean (true/false)");
+      });
+    }
+    if (kind === "integer_array") {
+      return items.map(s => {
+        const n = Number(s);
+        if (!Number.isFinite(n)) throw new Error("not a number");
+        return Math.trunc(n);
+      });
+    }
+    if (kind === "double_array") {
+      return items.map(s => {
+        const n = Number(s);
+        if (!Number.isFinite(n)) throw new Error("not a number");
+        return n;
+      });
+    }
+    return items;  // string_array
+  }
+  return el.value;
+}
+
+function renderNode(nodeData) {
+  const card = document.createElement("section");
+  card.className = "node";
+  card.dataset.node = nodeData.name;
+
+  const head = document.createElement("div");
+  head.className = "node-head";
+  const title = document.createElement("div");
+  title.className = "node-title";
+  title.textContent = nodeData.name;
+  const badge = document.createElement("span");
+  badge.className = "badge " + (nodeData.available ? "ok" : "bad");
+  badge.textContent = nodeData.available ? "available" : "unavailable";
+  title.appendChild(badge);
+  head.appendChild(title);
+  card.appendChild(head);
+
+  if (!nodeData.available) {
+    const err = document.createElement("div");
+    err.className = "error";
+    err.textContent = nodeData.error
+      ? `not reachable: ${nodeData.error}`
+      : "node is not reachable";
+    card.appendChild(err);
+    return card;
+  }
+
+  const params = nodeData.parameters || [];
+  if (params.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "no parameters declared";
+    card.appendChild(empty);
+    return card;
+  }
+
+  const table = document.createElement("table");
+  table.innerHTML =
+    "<thead><tr><th>Name</th><th>Type</th><th>Value</th><th>Notes</th></tr></thead>";
+  const tbody = document.createElement("tbody");
+  for (const p of params) {
+    const tr = document.createElement("tr");
+
+    const tdName = document.createElement("td");
+    tdName.className = "name";
+    tdName.textContent = p.name;
+
+    const tdType = document.createElement("td");
+    tdType.className = "meta";
+    tdType.textContent = p.type;
+
+    const tdValue = document.createElement("td");
+    tdValue.className = "value";
+    const input = inputForParameter(p);
+    if (p.read_only) {
+      input.disabled = true;
+    }
+    input.dataset.paramName = p.name;
+    input.dataset.original = JSON.stringify(p.value ?? null);
+    tdValue.appendChild(input);
+
+    const tdMeta = document.createElement("td");
+    tdMeta.className = "meta";
+    const meta = [];
+    if (p.read_only) meta.push("read-only");
+    if (p.constraints) meta.push(p.constraints);
+    if (p.description) meta.push(p.description);
+    tdMeta.textContent = meta.join(" - ");
+
+    tr.appendChild(tdName);
+    tr.appendChild(tdType);
+    tr.appendChild(tdValue);
+    tr.appendChild(tdMeta);
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+  card.appendChild(table);
+
+  const actions = document.createElement("div");
+  actions.className = "row-actions";
+  const updateBtn = document.createElement("button");
+  updateBtn.textContent = "Update changed";
+  updateBtn.addEventListener("click", () => updateNode(nodeData.name, card, updateBtn));
+  actions.appendChild(updateBtn);
+  card.appendChild(actions);
+
+  return card;
+}
+
+function collectChanged(card) {
+  const inputs = card.querySelectorAll("input[data-param-name]");
+  const changed = {};
+  for (const el of inputs) {
+    if (el.disabled) continue;
+    let value;
+    try {
+      value = readInput(el);
+    } catch (e) {
+      throw new Error(`${el.dataset.paramName}: ${e.message}`);
+    }
+    const original = el.dataset.original;
+    const current = JSON.stringify(value);
+    if (current !== original) {
+      changed[el.dataset.paramName] = value;
+    }
+  }
+  return changed;
+}
+
+async function updateNode(nodeName, card, button) {
+  setStatus("");
+  let changed;
+  try {
+    changed = collectChanged(card);
+  } catch (e) {
+    setStatus(`input error - ${e.message}`, "error");
+    return;
+  }
+  const keys = Object.keys(changed);
+  if (keys.length === 0) {
+    setStatus(`no changes for ${nodeName}`, "ok");
+    return;
+  }
+
+  button.disabled = true;
+  try {
+    const body = await fetchJson("/api/parameters", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ node: nodeName, parameters: changed }),
+    });
+    const updated = body.updated || [];
+    const rejected = body.rejected || [];
+    if (rejected.length === 0) {
+      setStatus(
+        `updated ${updated.length} parameter(s) on ${nodeName}: ${updated.join(", ")}`,
+        "ok");
+    } else {
+      const reasons = rejected.map(r => `${r.name}: ${r.reason}`).join("; ");
+      setStatus(
+        `partial: updated [${updated.join(", ")}], rejected ${reasons}`,
+        "error");
+    }
+    await loadAll();
+  } catch (e) {
+    setStatus(`update failed - ${e.message}`, "error");
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function loadAll() {
+  setStatus("loading...");
+  els.nodes.innerHTML = "";
+  try {
+    const body = await fetchJson("/api/parameters");
+    const nodes = body.nodes || [];
+    if (nodes.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = "no target nodes configured";
+      els.nodes.appendChild(empty);
+    } else {
+      for (const n of nodes) {
+        els.nodes.appendChild(renderNode(n));
+      }
+    }
+    els.lastLoaded.textContent = `loaded at ${new Date().toLocaleTimeString()}`;
+    setStatus("");
+  } catch (e) {
+    setStatus(`load failed - ${e.message}`, "error");
+  }
+}
+
+async function checkHealth() {
+  try {
+    const body = await fetchJson("/api/health");
+    setHealth(`bridge: ${body.node || "ok"}`, "");
+  } catch (e) {
+    setHealth(`bridge unreachable - ${e.message}`, "");
+  }
+}
+
+els.reload.addEventListener("click", loadAll);
+checkHealth().then(loadAll);
+</script>
+</body>
+</html>

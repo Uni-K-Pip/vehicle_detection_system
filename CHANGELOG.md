@@ -90,6 +90,24 @@ All notable changes to this project will be documented in this file.
   subscriber callback.
 - `vehicle_detection.launch.py`: now also starts `vehicle_detector_node`
   by default. New `use_detector` launch argument toggles it.
+- `parameter_bridge_node`: ROS 2 node hosting the browser-based
+  parameter GUI on `gui_port` (default 8081). Serves
+  `web/parameter_gui.html` at `/`, exposes `GET /api/health`,
+  `GET /api/parameters`, and `POST /api/parameters`, and bridges to
+  the parameter services of `pcd_loader_node`,
+  `vehicle_detector_node`, and `detection_sender_node` via
+  `rclcpp::AsyncParametersClient`. Binds to `127.0.0.1` by default;
+  override via the `host` parameter (or the `gui_host` launch
+  argument) when intentionally exposing the GUI to a network. Uses
+  `cpp-httplib` (MIT, fetched via CMake FetchContent) and
+  `nlohmann_json` (rosdep `nlohmann-json-dev`).
+- `parameter_json` helpers: convert between `rclcpp::Parameter` and
+  JSON with type-aware coercion, including a range check on
+  floating-point values targeting integer parameters to avoid
+  undefined casts. Covered by GTest unit tests.
+- `vehicle_detection.launch.py`: new `use_gui` (default `true`) and
+  `gui_host` (default `127.0.0.1`) arguments wire the parameter GUI
+  into the rest of the pipeline.
 
 ### Changed
 
@@ -134,5 +152,4 @@ All notable changes to this project will be documented in this file.
 
 ### Planned
 
-- Web GUI parameter bridge.
 - Demo screenshot or GIF for `docs/`.

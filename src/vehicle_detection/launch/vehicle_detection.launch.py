@@ -23,7 +23,8 @@ Launch file for the vehicle_detection pipeline.
 
 Starts pcd_loader_node, vehicle_detector_node, the static transform from
 target_frame_id to input_frame_id, the optional detection_sender_node,
-and an optional RViz instance with the bundled detector configuration.
+the optional parameter_bridge_node Web GUI, and an optional RViz instance
+with the bundled detector configuration.
 """
 
 from pathlib import Path
@@ -98,6 +99,21 @@ def generate_launch_description():
         default_value=default_rviz_config,
         description='Path to the RViz configuration file.',
     )
+    use_gui_arg = DeclareLaunchArgument(
+        'use_gui',
+        default_value='true',
+        description='Start parameter_bridge_node with the browser-based GUI.',
+    )
+    gui_host_arg = DeclareLaunchArgument(
+        'gui_host',
+        default_value='127.0.0.1',
+        description=(
+            'Bind address for parameter_bridge_node. Defaults to loopback to '
+            'keep the unauthenticated parameter-write API local. Set to '
+            '0.0.0.0 (or a specific interface) when exposing the GUI from a '
+            'Docker container to the host.'
+        ),
+    )
 
     pcd_file = LaunchConfiguration('pcd_file')
     input_frame_id = LaunchConfiguration('input_frame_id')
@@ -108,6 +124,8 @@ def generate_launch_description():
     use_sender = LaunchConfiguration('use_sender')
     use_rviz = LaunchConfiguration('use_rviz')
     rviz_config = LaunchConfiguration('rviz_config')
+    use_gui = LaunchConfiguration('use_gui')
+    gui_host = LaunchConfiguration('gui_host')
 
     pcd_loader = Node(
         package='vehicle_detection',
@@ -171,6 +189,18 @@ def generate_launch_description():
         ],
     )
 
+    parameter_bridge = Node(
+        package='vehicle_detection',
+        executable='parameter_bridge_node',
+        name='parameter_bridge_node',
+        output='screen',
+        parameters=[
+            params_file,
+            {'host': gui_host},
+        ],
+        condition=IfCondition(use_gui),
+    )
+
     return LaunchDescription([
         pcd_file_arg,
         input_frame_id_arg,
@@ -181,10 +211,13 @@ def generate_launch_description():
         use_sender_arg,
         use_rviz_arg,
         rviz_config_arg,
+        use_gui_arg,
+        gui_host_arg,
         OpaqueFunction(function=_resolve_pcd_file),
         static_tf,
         pcd_loader,
         vehicle_detector,
         detection_sender,
         rviz,
+        parameter_bridge,
     ])

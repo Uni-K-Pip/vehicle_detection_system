@@ -91,14 +91,17 @@ ros2 launch vehicle_detection vehicle_detection.launch.py \
   target_frame_id:=map \
   publish_once:=true \
   use_sender:=true \
-  use_rviz:=true
+  use_rviz:=true \
+  use_gui:=true
 ```
 
 `use_sender:=true` adds `detection_sender_node` (republish on
 `/vehicle_detections` and / or POST JSON per
 [`docs/payload_schema.md`](docs/payload_schema.md)). `use_rviz:=true`
 opens RViz with the bundled config in
-`src/vehicle_detection/rviz/vehicle_detection.rviz`.
+`src/vehicle_detection/rviz/vehicle_detection.rviz`. `use_gui:=true`
+(default) starts `parameter_bridge_node` for runtime parameter tuning;
+see [Browser GUI](#browser-gui).
 
 ## Confirming the pipeline
 
@@ -122,6 +125,46 @@ With `use_rviz:=true`, RViz subscribes to
 counts are summarized in [`docs/results.md`](docs/results.md).
 A captured screenshot belongs alongside that document; the run is
 fully reproducible via `./tools/run_demo.sh data/pcd/sample.pcd`.
+
+## Browser GUI
+
+`parameter_bridge_node` exposes a small Web UI for tuning ROS 2 parameters
+at runtime. The HTTP API is unauthenticated, so it binds to loopback
+(`127.0.0.1:8081`) by default and is reachable only from the same machine.
+
+```bash
+# stop the GUI for a launch run:
+ros2 launch vehicle_detection vehicle_detection.launch.py use_gui:=false
+```
+
+To expose the GUI from a Docker container to the Windows host, both bind
+on `0.0.0.0` and publish the port:
+
+```bash
+# inside the container
+ros2 launch vehicle_detection vehicle_detection.launch.py gui_host:=0.0.0.0
+
+# when starting the container, publish the port:
+docker run -p 8081:8081 ...
+```
+
+`gui_port` and `host` are also settable through `detector_params.yaml` or
+`ros2 param set /parameter_bridge_node host 0.0.0.0` if preferred. Treat
+non-loopback bindings as a deliberate exposure of runtime parameter writes.
+
+HTTP API exposed by the bridge:
+
+| Method | Path              | Body / Response                                                |
+| ------ | ----------------- | -------------------------------------------------------------- |
+| GET    | `/`               | `parameter_gui.html`                                           |
+| GET    | `/api/health`     | `{ ok, node, target_nodes }`                                   |
+| GET    | `/api/parameters` | `{ ok, nodes: [{ name, available, parameters }] }`             |
+| POST   | `/api/parameters` | `{ node, parameters: { ... } }` -> `{ ok, updated, rejected }` |
+
+Implementation libraries: [cpp-httplib](https://github.com/yhirose/cpp-httplib)
+(MIT, fetched via CMake FetchContent) and
+[nlohmann/json](https://github.com/nlohmann/json) (MIT, rosdep key
+`nlohmann-json-dev`).
 
 ## Tests
 

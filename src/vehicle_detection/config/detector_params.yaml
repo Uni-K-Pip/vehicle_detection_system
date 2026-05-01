@@ -55,3 +55,8 @@ parameter_bridge_node:
   ros__parameters:
     # Local Web UI port exposed from the container to the Windows host.
     gui_port: 8081
+    # HTTP bind address. Defaults to loopback so the unauthenticated
+    # parameter-write API stays on the local machine. Override to 0.0.0.0
+    # inside Docker (or pick a specific interface) when intentionally
+    # exposing the GUI to the host.
+    host: 127.0.0.1

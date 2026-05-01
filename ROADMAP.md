@@ -64,6 +64,16 @@ This roadmap tracks the growth of `vehicle_detection_system` as a portfolio proj
 - [x] Add a small local receiver example
 - [x] Document payload schema
 
+## v0.7.x - Browser GUI Parameter Bridge
+
+- [x] Implement `parameter_bridge_node` (HTTP server)
+- [x] Serve static `parameter_gui.html` at `/`
+- [x] Expose `GET /api/health`
+- [x] Expose `GET /api/parameters` for the configured target nodes
+- [x] Expose `POST /api/parameters` with type-aware coercion
+- [x] Add `use_gui` launch argument
+- [x] Add unit tests for `parameter_json` round-trips
+
 ## v1.0.0 - Portfolio MVP
 
 - [x] Provide a reproducible Docker-based setup

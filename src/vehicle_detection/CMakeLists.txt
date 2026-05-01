@@ -12,7 +12,9 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 find_package(ament_cmake REQUIRED)
+find_package(ament_index_cpp REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rcl_interfaces REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
@@ -23,16 +25,42 @@ find_package(tf2_sensor_msgs REQUIRED)
 find_package(MPI REQUIRED COMPONENTS C)
 find_package(pcl_conversions REQUIRED)
 find_package(PCL REQUIRED COMPONENTS common io filters segmentation search)
+find_package(nlohmann_json REQUIRED)
+
+# cpp-httplib: header-only MIT-licensed HTTP server used by the
+# parameter_bridge_node Web GUI. Sourced via FetchContent so the repo
+# stays free of vendored copies.
+include(FetchContent)
+set(HTTPLIB_REQUIRE_OPENSSL OFF CACHE BOOL "" FORCE)
+set(HTTPLIB_REQUIRE_ZLIB OFF CACHE BOOL "" FORCE)
+set(HTTPLIB_REQUIRE_BROTLI OFF CACHE BOOL "" FORCE)
+set(HTTPLIB_USE_OPENSSL_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
+set(HTTPLIB_USE_ZLIB_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
+set(HTTPLIB_USE_BROTLI_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(
+  cpp_httplib
+  GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
+  GIT_TAG v0.18.5
+  GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(cpp_httplib)
 
 # Pure parameter validation helpers and JSON / HTTP utilities (no PCL).
 add_library(vehicle_detection_core
   src/parameter_validation.cpp
   src/detection_json.cpp
   src/http_client.cpp
+  src/parameter_json.cpp
 )
 target_include_directories(vehicle_detection_core PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
+)
+target_link_libraries(vehicle_detection_core
+  PUBLIC nlohmann_json::nlohmann_json
+)
+ament_target_dependencies(vehicle_detection_core
+  PUBLIC rclcpp rcl_interfaces
 )
 target_compile_features(vehicle_detection_core PUBLIC cxx_std_17)
 
@@ -97,6 +125,21 @@ ament_target_dependencies(detection_sender_node
   vision_msgs
 )
 
+add_executable(parameter_bridge_node src/parameter_bridge_node.cpp)
+target_include_directories(parameter_bridge_node PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+target_link_libraries(parameter_bridge_node
+  vehicle_detection_core
+  httplib::httplib
+  nlohmann_json::nlohmann_json
+)
+ament_target_dependencies(parameter_bridge_node
+  rclcpp
+  rcl_interfaces
+  ament_index_cpp
+)
+
 install(TARGETS
   vehicle_detection_core
   vehicle_detection_pcl
@@ -110,6 +153,7 @@ install(TARGETS
   pcd_loader_node
   vehicle_detector_node
   detection_sender_node
+  parameter_bridge_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -117,7 +161,7 @@ install(DIRECTORY include/
   DESTINATION include
 )
 
-install(DIRECTORY launch config rviz
+install(DIRECTORY launch config rviz web
   DESTINATION share/${PROJECT_NAME}
 )
 
@@ -159,6 +203,20 @@ if(BUILD_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/include
   )
 
+  ament_add_gtest(test_parameter_json
+    test/test_parameter_json.cpp
+  )
+  target_link_libraries(test_parameter_json
+    vehicle_detection_core
+    nlohmann_json::nlohmann_json
+  )
+  target_include_directories(test_parameter_json PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+  )
+  ament_target_dependencies(test_parameter_json
+    rclcpp
+  )
+
   ament_add_pytest_test(test_launch_description
     test/test_launch_description.py
   )
@@ -166,4 +224,9 @@ endif()
 
 ament_export_include_directories(include)
 ament_export_libraries(vehicle_detection_core vehicle_detection_pcl)
+ament_export_dependencies(
+  rclcpp
+  rcl_interfaces
+  nlohmann_json
+)
 ament_package()
