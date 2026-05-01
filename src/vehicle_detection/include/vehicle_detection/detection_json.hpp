@@ -18,55 +18,42 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef VEHICLE_DETECTION__PARAMETER_VALIDATION_HPP_
-#define VEHICLE_DETECTION__PARAMETER_VALIDATION_HPP_
+#ifndef VEHICLE_DETECTION__DETECTION_JSON_HPP_
+#define VEHICLE_DETECTION__DETECTION_JSON_HPP_
 
 #include <cstdint>
-#include <initializer_list>
 #include <string>
-#include <string_view>
 #include <vector>
 
 namespace vehicle_detection
 {
 
-struct ValidationResult
+struct DetectionJsonItem
 {
-  bool ok;
-  std::string reason;
-
-  static ValidationResult success();
-  static ValidationResult failure(std::string reason);
+  std::string id;
+  std::string class_label;
+  double confidence;
+  double center_x;
+  double center_y;
+  double center_z;
+  double length;
+  double width;
+  double height;
+  double yaw;
 };
 
-ValidationResult validate_non_empty_string(
-  std::string_view name,
-  std::string_view value);
+struct DetectionJsonPayload
+{
+  std::int32_t stamp_sec;
+  std::uint32_t stamp_nanosec;
+  std::string frame_id;
+  std::vector<DetectionJsonItem> detections;
+};
 
-ValidationResult validate_existing_file(
-  std::string_view name,
-  std::string_view path);
+std::string format_iso8601_utc(std::int32_t sec, std::uint32_t nanosec);
 
-ValidationResult validate_positive_double(
-  std::string_view name,
-  double value);
-
-ValidationResult validate_double_range(
-  std::string_view name,
-  double value,
-  double min_inclusive,
-  double max_inclusive);
-
-ValidationResult validate_int_min(
-  std::string_view name,
-  std::int64_t value,
-  std::int64_t min_inclusive);
-
-ValidationResult validate_enum(
-  std::string_view name,
-  std::string_view value,
-  std::initializer_list<std::string_view> allowed);
+std::string serialize_detections(const DetectionJsonPayload & payload);
 
 }  // namespace vehicle_detection
 
-#endif  // VEHICLE_DETECTION__PARAMETER_VALIDATION_HPP_
+#endif  // VEHICLE_DETECTION__DETECTION_JSON_HPP_

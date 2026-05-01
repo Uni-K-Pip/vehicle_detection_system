@@ -1,4 +1,26 @@
-#include "vehicle_detection/parameter_validation.hpp"
+// Copyright 2026 kohei
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+// THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+#include <pcl/PCLPointCloud2.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl_conversions/pcl_conversions.h>
 
 #include <chrono>
 #include <filesystem>
@@ -7,13 +29,11 @@
 #include <stdexcept>
 #include <string>
 
-#include <pcl/PCLPointCloud2.h>
-#include <pcl/io/pcd_io.h>
-#include <pcl_conversions/pcl_conversions.h>
-
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/qos.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
+
+#include "vehicle_detection/parameter_validation.hpp"
 
 namespace vehicle_detection
 {
@@ -54,7 +74,7 @@ public:
       RCLCPP_INFO(get_logger(),
         "publishing at %.3f Hz on '%s'",
         publish_rate_hz_, input_points_topic_.c_str());
-      timer_ = create_wall_timer(period_ns, [this]() { publish_cloud(); });
+      timer_ = create_wall_timer(period_ns, [this]() {publish_cloud();});
     }
   }
 

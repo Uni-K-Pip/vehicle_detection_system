@@ -120,6 +120,9 @@ parameter_bridge_node
   -> ROS 2 parameter services
 ```
 
+A rendered architecture diagram is available at
+[`docs/images/architecture.svg`](images/architecture.svg).
+
 外部利用者が購読する安定トピックは`/vehicle_detections`とする。
 `/vehicle_detections/raw`はノード間中継用の内部トピックであり、後続で送信方式を差し替えるために使う。
 
