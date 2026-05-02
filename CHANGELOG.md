@@ -2,7 +2,11 @@
 
 本プロジェクトの主な変更点はこのファイルに記録する。
 
-## Unreleased
+## v1.0.0 - 2026-05-02
+
+初版リリース (MVP)。`osrf/ros:jazzy-desktop` 上で PCD 点群から
+普通車検知を行い、RViz 表示・ROS topic / HTTP JSON 送信・ブラウザ
+パラメータ GUI を含む一連のパイプラインを提供する。
 
 ### Added
 
@@ -160,7 +164,3 @@
 
 - `config/` のインストール元をリポジトリルートから
   `src/vehicle_detection/config/` に変更した。
-
-### Planned
-
-- (なし)
