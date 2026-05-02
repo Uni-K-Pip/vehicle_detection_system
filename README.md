@@ -87,6 +87,17 @@ ros2 launch vehicle_detection vehicle_detection.launch.py \
   use_gui:=true
 ```
 
+複数の PCD を `publish_rate_hz` の周期で順番に publish するには `pcd_directory` (Phase 2) を使う:
+
+```bash
+ros2 launch vehicle_detection vehicle_detection.launch.py \
+  pcd_directory:=data/pandaset_lidar_pcd_subset/Lidar \
+  pcd_glob:='*.pcd' \
+  loop:=true
+```
+
+`pcd_directory` 配下の PCD は `pcd_glob` (既定 `*.pcd`) でフィルタし、ファイル名で sort された順に再生する。明示的なリストを使いたい場合は YAML から `pcd_files: ["a.pcd", "b.pcd"]` を渡す。`loop:=false` を指定するとリスト末尾で publish が停止 (ノードは生存)。`pcd_directory` も `pcd_files` も未指定の場合は MVP どおり単一 `pcd_file` のみを再生する。
+
 `use_sender:=true` を指定すると `detection_sender_node` が追加され、`/vehicle_detections` への再パブリッシュおよび／または [`docs/payload_schema.md`](docs/payload_schema.md) に沿った JSON の POST を行う。`use_rviz:=true` で `src/vehicle_detection/rviz/vehicle_detection.rviz` を読み込んだ RViz が起動する。`use_gui:=true` (既定) は実行時パラメータ調整用の `parameter_bridge_node` を起動する。詳細は [ブラウザ GUI](#ブラウザ-gui) を参照。
 
 ## パイプラインの確認

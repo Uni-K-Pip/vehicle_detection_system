@@ -8,19 +8,34 @@ Phase 2 実用性改善のうち「複数PCD連続再生」(FR-011) を対象と
 残りの Phase 2 項目 (rosbag 入力、検知結果保存、簡易トラッキング、
 パラメータプリセット、HTTP payload schema バージョン管理) は本範囲外。
 
-### Planned
+### Added
 
-- `pcd_loader_node` に再生リスト機能を追加する。
-  `pcd_files` (string[]) を新規パラメータとして導入し、明示的な
-  再生リストを指定できるようにする。
-  `pcd_directory` (string) と `pcd_glob` (string、初期値 `*.pcd`) で、
-  ディレクトリ配下の PCD を sort 列挙してリストとして採用できるように
-  する。
-  `loop` (bool、初期値 `true`) で、リスト末尾でループするか停止するかを
-  切り替えられるようにする。
-- いずれのパラメータも未指定の場合は、従来の `pcd_file` を 1 要素の
-  リストとして扱う。MVP の単一PCD再生の挙動は完全に維持する。
-- 再生リスト解決ロジックのユニットテストを追加する。
+- `pcd_loader_node` に再生リスト機能を追加。新規パラメータ `pcd_files`
+  (string[]) で明示リストを、`pcd_directory` (string) と `pcd_glob`
+  (string、初期値 `*.pcd`) でディレクトリ展開を、`loop` (bool、初期値
+  `true`) でリスト末尾の挙動 (ループ／停止) を指定できる。いずれも
+  未指定の場合は従来の `pcd_file` 単一PCD再生に等しい (MVP 互換)。
+- `vehicle_detection.launch.py` に `pcd_directory`、`pcd_glob`、`loop`
+  の launch 引数を追加し、`ros2 launch ... pcd_directory:=<dir>` で
+  ディレクトリ再生を 1 コマンドで起動できるようにした。
+- `vehicle_detection_core` 共通ライブラリに `pcd_playlist` モジュール
+  (`PcdPlaylistInputs`、`resolve_pcd_playlist`、`wildcard_match`) を
+  追加。リスト解決を ROS / PCL から切り離し、純粋ヘルパーとして
+  単体テスト可能にしている。
+- `test_pcd_playlist` GTest スイート: 再生リスト解決の優先順位、
+  ディレクトリ glob のソート、欠落ファイルの拒否、空ディレクトリの
+  拒否、空文字エントリの拒否、ワイルドカードマッチをカバーする。
+- `test_launch_description.py` で新規 launch 引数 (`pcd_directory`、
+  `pcd_glob`、`loop`) の存在を検証するようにした。
+
+### Changed
+
+- `pcd_loader_node` は `pcl::io::loadPCDFile` を起動時の 1 回呼び出し
+  ではなく、各 publish ティック直前の lazy-load + 1 スロットキャッシュ
+  に変更。同じインデックスを連続 publish するときは再ロードしない。
+- `config/detector_params.yaml` の `pcd_loader_node` セクションに
+  `pcd_files`、`pcd_directory`、`pcd_glob`、`loop` の既定値とコメント
+  を追加。
 
 ## v1.0.0 - 2026-05-02
 

@@ -98,9 +98,10 @@
 保存、簡易トラッキング、パラメータプリセット、HTTP payload schema の
 バージョン管理) は本リリースには含めず、後続リリースで取り扱う。
 
-- [ ] 複数PCD連続再生 (FR-011)
-  - [ ] `pcd_loader_node` に再生リスト機構を追加する
+- [x] 複数PCD連続再生 (FR-011)
+  - [x] `pcd_loader_node` に再生リスト機構を追加する
         (`pcd_files` / `pcd_directory` / `pcd_glob` / `loop`)
-  - [ ] 単一PCD再生 (MVP) の挙動を変えない
-  - [ ] 再生リスト解決のユニットテストを追加する
-  - [ ] 要件・設計・README・CHANGELOG に追記する
+  - [x] 単一PCD再生 (MVP) の挙動を変えない
+  - [x] 再生リスト解決のユニットテストを追加する
+        (`test_pcd_playlist`)
+  - [x] 要件・設計・README・CHANGELOG に追記する
