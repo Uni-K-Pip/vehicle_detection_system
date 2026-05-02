@@ -1,6 +1,6 @@
 # ロードマップ
 
-本ロードマップは、ポートフォリオプロジェクトとしての `vehicle_detection_system` の成長を追跡するためのもの。
+本ロードマップは、`vehicle_detection_system` の開発進捗を追跡するためのもの。
 
 ## v0.1.0 - 設計ベースライン
 
@@ -74,7 +74,7 @@
 - [x] `use_gui` launch 引数を追加する
 - [x] `parameter_json` の往復変換に対する単体テストを追加する
 
-## v1.0.0 - ポートフォリオ MVP
+## v1.0.0 - MVP
 
 - [x] Docker ベースで再現可能なセットアップを提供する
       (`osrf/ros:jazzy-desktop` をベースとした `Dockerfile`)

@@ -60,7 +60,7 @@
 - 初期版の要件定義、設計メモ、コーディング前チェックリスト。
 - 初期版の検知器、データセット、transform 用パラメータファイル。
 - ROS 2 ビルド成果物および大容量点群データに対する Git の無視ルール。
-- ポートフォリオ志向の開発のためのロードマップ。
+- 開発進捗追跡用のロードマップ。
 - `src/vehicle_detection` 配下の `ament_cmake` パッケージひな形。
   `package.xml`、`CMakeLists.txt`、launch および config の install ルール
   を含む。
