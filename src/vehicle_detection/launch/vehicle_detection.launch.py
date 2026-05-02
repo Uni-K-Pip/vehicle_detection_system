@@ -59,6 +59,29 @@ def generate_launch_description():
         default_value='data/pcd/sample.pcd',
         description='Path to the PCD file to publish on /input/points.',
     )
+    pcd_directory_arg = DeclareLaunchArgument(
+        'pcd_directory',
+        default_value='',
+        description=(
+            'Phase 2: directory of PCDs to play back continuously. When '
+            'non-empty, takes priority over pcd_file. Files are scanned '
+            'with pcd_glob and sorted lexicographically.'
+        ),
+    )
+    pcd_glob_arg = DeclareLaunchArgument(
+        'pcd_glob',
+        default_value='*.pcd',
+        description='Glob applied under pcd_directory (Phase 2).',
+    )
+    loop_arg = DeclareLaunchArgument(
+        'loop',
+        default_value='true',
+        description=(
+            'Phase 2: loop=true restarts the playlist after the last '
+            'file; loop=false stops publishing while keeping the node '
+            'alive.'
+        ),
+    )
     input_frame_id_arg = DeclareLaunchArgument(
         'input_frame_id',
         default_value='lidar',
@@ -116,6 +139,9 @@ def generate_launch_description():
     )
 
     pcd_file = LaunchConfiguration('pcd_file')
+    pcd_directory = LaunchConfiguration('pcd_directory')
+    pcd_glob = LaunchConfiguration('pcd_glob')
+    loop = LaunchConfiguration('loop')
     input_frame_id = LaunchConfiguration('input_frame_id')
     target_frame_id = LaunchConfiguration('target_frame_id')
     publish_once = LaunchConfiguration('publish_once')
@@ -136,6 +162,9 @@ def generate_launch_description():
             params_file,
             {
                 'pcd_file': pcd_file,
+                'pcd_directory': pcd_directory,
+                'pcd_glob': pcd_glob,
+                'loop': loop,
                 'input_frame_id': input_frame_id,
                 'publish_once': publish_once,
             },
@@ -203,6 +232,9 @@ def generate_launch_description():
 
     return LaunchDescription([
         pcd_file_arg,
+        pcd_directory_arg,
+        pcd_glob_arg,
+        loop_arg,
         input_frame_id_arg,
         target_frame_id_arg,
         publish_once_arg,

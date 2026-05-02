@@ -1,7 +1,20 @@
 pcd_loader_node:
   ros__parameters:
     # input PCD file. Override with launch argument pcd_file when needed.
+    # Used as the single-file fallback when neither pcd_files nor
+    # pcd_directory is set.
     pcd_file: data/pcd/sample.pcd
+    # Phase 2 multi-PCD continuous playback. Resolution order:
+    #   1. pcd_files (if non-empty) -- explicit ordered list.
+    #   2. pcd_directory (if non-empty) -- sorted glob via pcd_glob.
+    #   3. pcd_file (fallback to MVP single-file behaviour).
+    # Empty defaults preserve the MVP single-PCD behaviour.
+    pcd_files: []
+    pcd_directory: ""
+    pcd_glob: "*.pcd"
+    # When the playlist reaches its end, loop=true restarts at index 0,
+    # loop=false stops publishing while keeping the node alive.
+    loop: true
     # input point cloud frame. Default dataset setup assumes lidar.
     input_frame_id: lidar
     input_points_topic: /input/points

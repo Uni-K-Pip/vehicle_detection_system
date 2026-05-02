@@ -56,6 +56,7 @@ add_library(vehicle_detection_core
   src/detection_json.cpp
   src/http_client.cpp
   src/parameter_json.cpp
+  src/pcd_playlist.cpp
 )
 target_include_directories(vehicle_detection_core PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -183,6 +184,16 @@ if(BUILD_TESTING)
     vehicle_detection_core
   )
   target_include_directories(test_parameter_validation PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+  )
+
+  ament_add_gtest(test_pcd_playlist
+    test/test_pcd_playlist.cpp
+  )
+  target_link_libraries(test_pcd_playlist
+    vehicle_detection_core
+  )
+  target_include_directories(test_pcd_playlist PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
   )
 

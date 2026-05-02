@@ -55,6 +55,9 @@ def test_launch_arguments_present():
     }
     expected = {
         'pcd_file',
+        'pcd_directory',
+        'pcd_glob',
+        'loop',
         'input_frame_id',
         'target_frame_id',
         'publish_once',
