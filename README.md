@@ -148,7 +148,7 @@ colcon test --merge-install --packages-select vehicle_detection
 colcon test-result --verbose --test-result-base build/vehicle_detection
 ```
 
-ブラウザ GUI 追加前の最新フル ROS 2 実行記録は **117 tests, 0 errors, 0 failures, 14 skipped** ([`docs/results.md`](docs/results.md) を参照)。GUI 追加で `test_parameter_json` が増えているため、新しい数値を公開する際は Jazzy 上で `colcon test` を再実行すること。
+最新のフル ROS 2 実行記録は **144 tests, 0 errors, 0 failures, 18 skipped** ([`docs/results.md`](docs/results.md) を参照)。実行環境は `osrf/ros:jazzy-desktop` ベースの Docker イメージ。
 
 ## 初期決定事項
 

@@ -86,7 +86,7 @@
       (`docs/images/architecture.svg`)
 - [x] トピック echo の実行例を提供する (`docs/topic_echo.md`)
 - [x] テストと既知の制約を提供する (`docs/results.md`、
-      `docs/limitations.md`。117 tests、0 failures)
+      `docs/limitations.md`。144 tests、0 failures、18 skipped)
 - [x] 大きなデータファイルやローカルメモが追跡されていないことを確認する
       (`.gitignore` で PCD、`data/pcd/PandasetLidarData/`、
       ビルド成果物、`*_LOCAL.md` メモを除外済み)
