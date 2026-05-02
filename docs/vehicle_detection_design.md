@@ -132,35 +132,50 @@ A rendered architecture diagram is available at
 
 責務:
 
-- 起動時に指定PCDファイルを読み込む。
+- 起動時に指定PCDファイル (または再生リスト) を解決する。
 - PCDを`sensor_msgs/msg/PointCloud2`へ変換し、`/input/points`へpublishする。
 - 単発publishまたは周期publishを切り替える。
+- Phase 2: 複数PCDの連続再生に対応する。
 
 主要パラメータ:
 
 | パラメータ | 型 | 初期値 | 検証 |
 | --- | --- | --- | --- |
-| `pcd_file` | string | `data/pcd/sample.pcd` | 空文字不可、存在確認 |
+| `pcd_file` | string | `data/pcd/sample.pcd` | 再生リストが解決した場合は存在確認、未指定可 |
+| `pcd_files` | string[] | `[]` | 各要素は空文字不可、存在確認 (非空時) |
+| `pcd_directory` | string | `""` | 非空時はディレクトリの存在確認 |
+| `pcd_glob` | string | `*.pcd` | 空文字不可 |
+| `loop` | bool | `true` | なし |
 | `input_frame_id` | string | `lidar` | 空文字不可 |
 | `input_points_topic` | string | `/input/points` | 空文字不可 |
 | `publish_once` | bool | `false` | なし |
 | `publish_rate_hz` | double | `1.0` | `> 0.0` |
 
+再生リスト解決 (Phase 2):
+
+1. `pcd_files` が非空ならその順序のままリストとして採用する。
+2. `pcd_files` が空かつ `pcd_directory` が非空なら、`pcd_directory` 配下で `pcd_glob` (既定 `*.pcd`) にマッチするファイルを `std::filesystem` でソート列挙し、リストとして採用する。
+3. それ以外は `pcd_file` を 1 要素のリストとして採用する (MVP 互換)。
+4. リスト全要素について存在確認を行い、欠落があれば起動失敗扱い。
+
 処理:
 
-1. `pcd_file`を絶対パスへ解決する。
-2. `pcl::io::loadPCDFile<pcl::PCLPointCloud2>`で読み込む。
-3. 点数、フィールド名、PCDパスをログ出力する。
-4. `pcl_conversions::fromPCL`でROSメッセージへ変換する。
-5. `header.frame_id`へ`input_frame_id`を設定する。
-6. `publish_once=true`なら起動後1回publishし、ノードは生存する。
-7. `publish_once=false`なら`publish_rate_hz`周期でpublishする。
+1. 再生リストを解決し、各要素の絶対パス化と存在確認を行う。
+2. リスト先頭から `pcl::io::loadPCDFile<pcl::PCLPointCloud2>` で読み込み、`pcl_conversions::fromPCL` でROSメッセージへ変換する。
+3. `header.frame_id`へ`input_frame_id`を設定する。
+4. 点数、フィールド名、PCDパスをログ出力する。
+5. `publish_once=true`なら起動後 1 回 publish し、ノードは生存する。
+6. `publish_once=false`なら`publish_rate_hz`周期で次のインデックスのファイルを publish する。
+   - 直前にロード済みのインデックスと同一の場合は、再ロードを省略してキャッシュ済みメッセージを再利用する。
+   - リストの末尾に達したとき、`loop=true` なら先頭に戻り、`loop=false` なら publish 用タイマーを停止する (ノードは生存)。
+7. 各 publish 直前に、現在のインデックスとファイルパスを INFO ログに出力する。
 
 異常時:
 
-- ファイルが存在しない場合はエラーログを出し、ノード初期化を失敗扱いにする。
+- 再生リストが空 (どのパラメータにも値がない) 場合はエラーログを出し、ノード初期化を失敗扱いにする。
+- リストの 1 要素でも存在しないファイルがあれば、欠落パスをログ出力して起動失敗扱いにする。
 - 点数0の場合は警告を出して空点群としてpublishし、検知側で安全に処理する。
-- 読み込み失敗時はPCDパスとPCLエラーの概要をログ出力する。
+- 読み込み失敗時はPCDパスとPCLエラーの概要をログ出力する。連続再生中に失敗した場合は、その回の publish をスキップして次のティックへ進める。
 
 ### 6.2 `vehicle_detector_node`
 
@@ -483,6 +498,7 @@ PandaSet公式サイトは、PandaSetを自動運転向けopen-source datasetと
 | bbox算出 | center、length、width、height |
 | 車両判定 | 境界値、範囲外除外 |
 | HTTP JSON変換 | 必須フィールド、空検知配列 |
+| 再生リスト解決 (Phase 2) | `pcd_files`優先、`pcd_directory`展開、未指定時の単一PCDフォールバック、欠落ファイル拒否、`loop`末尾挙動 |
 
 ROS統合テスト:
 

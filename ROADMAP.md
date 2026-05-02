@@ -90,3 +90,17 @@
 - [x] 大きなデータファイルやローカルメモが追跡されていないことを確認する
       (`.gitignore` で PCD、`data/pcd/PandasetLidarData/`、
       ビルド成果物、`*_LOCAL.md` メモを除外済み)
+
+## v1.1.0 - Phase 2 実用性改善 (進行中)
+
+要件定義書 12 章「Phase 2: 実用性改善」項目のうち、本リリースでは
+「複数PCD連続再生」のみを対象とする。残りの項目 (rosbag 入力、検知結果
+保存、簡易トラッキング、パラメータプリセット、HTTP payload schema の
+バージョン管理) は本リリースには含めず、後続リリースで取り扱う。
+
+- [ ] 複数PCD連続再生 (FR-011)
+  - [ ] `pcd_loader_node` に再生リスト機構を追加する
+        (`pcd_files` / `pcd_directory` / `pcd_glob` / `loop`)
+  - [ ] 単一PCD再生 (MVP) の挙動を変えない
+  - [ ] 再生リスト解決のユニットテストを追加する
+  - [ ] 要件・設計・README・CHANGELOG に追記する

@@ -219,6 +219,26 @@ src/
 - 検知ごとに検知数をログ出力できること。
 - 異常時には原因が分かるエラーを出すこと。
 
+### FR-011 複数PCD連続再生 (Phase 2)
+
+`pcd_loader_node`はMVPの単一PCD再生に加えて、複数のPCDファイルを順番にpublishする「連続再生」モードを提供する。データセット内の複数フレームを順次評価したい場合に、launch を再起動せずに切り替えるための機能。
+
+- 複数PCDファイルを「再生リスト」として指定できること。
+  - 明示的なファイルパスのリストで指定する方式 (`pcd_files`) を提供すること。
+  - ディレクトリと glob パターンによりリストを構築する方式 (`pcd_directory` + `pcd_glob`) を提供すること。
+  - どちらも未指定の場合は、MVPと同じく単一の `pcd_file` を 1 要素のリストとして扱うこと。
+  - `pcd_files` が非空の場合は、`pcd_directory` の解決に優先すること。
+- 再生リストの各要素は、ノード起動時に存在を検証すること。
+  - 1 つでも存在しないファイルがあった場合は、起動を失敗扱いとし、欠落したパスをログ出力すること。
+- 再生は `publish_rate_hz` 周期で行い、1 周期ごとに次のファイルへ進むこと。
+- リストの末尾に達した場合の挙動は `loop` パラメータで切り替えられること。
+  - `loop=true` (初期値) の場合、先頭に戻ってループ再生すること。
+  - `loop=false` の場合、最後のファイルを publish した後は publish を停止し、ノードは生存を続けること。
+- `publish_once=true` の場合は、リストの先頭ファイルを 1 回だけ publish し、それ以降は publish しないこと (MVP の単一ファイル挙動と整合)。
+- 各 publish 直前に対象ファイルを読み込めばよいこと。直前に読み込んだファイルと同一であれば、再読み込みを省略してよい。
+- 各 publish 時に、現在のインデックスとファイルパスをログ出力すること。
+- 単一PCD再生 (`pcd_files` および `pcd_directory` 未指定) の挙動は MVP と完全に同一であること。
+
 ## 6. パラメータ要件
 
 | パラメータ | 説明 | 初期値案 |
@@ -230,7 +250,11 @@ src/
 | `dataset_attribution` | データセット出典表記 | PandaSet by Hesai and Scale AI |
 | `dataset_extract_dir` | 展開先ディレクトリ | `data/pandaset_lidar_pcd_subset` |
 | `dataset_pcd_glob` | 使用PCDファイル検索パターン | `Lidar/*.pcd` |
-| `pcd_file` | 入力PCDファイルパス | `data/pcd/sample.pcd` |
+| `pcd_file` | 入力PCDファイルパス (単一PCD再生) | `data/pcd/sample.pcd` |
+| `pcd_files` | 連続再生する PCD ファイルパスのリスト (Phase 2) | `[]` |
+| `pcd_directory` | 連続再生する PCD を glob で集めるディレクトリ (Phase 2) | `""` |
+| `pcd_glob` | `pcd_directory` 配下で集める glob パターン (Phase 2) | `*.pcd` |
+| `loop` | 再生リスト末尾でループするかどうか (Phase 2) | `true` |
 | `input_frame_id` | 入力点群座標系 | `lidar` |
 | `target_frame_id` | 検知結果出力座標系 | `map` |
 | `static_tf_x` | `lidar`から`map`へのXオフセット [m] | `0.0` |
@@ -429,6 +453,9 @@ transforms:
 - PCDファイルが存在しない場合、分かりやすいエラーを出して終了すること。
 - 1つ以上のPCDサンプルで`/vehicle_detections`に検知結果がpublishされること。
 - READMEにセットアップ、データ配置、起動、パラメータ調整方法が記載されていること。
+- `pcd_files` または `pcd_directory` で複数PCDを指定したとき、`publish_rate_hz` の周期で順次 publish されること (Phase 2)。
+- `loop=true` でリスト末尾の次に先頭に戻り、`loop=false` でリスト末尾以降は publish が止まること (Phase 2)。
+- 複数PCD指定時に、`pcd_files` も `pcd_directory` も未指定の MVP 単一PCD再生の挙動が変わらないこと (Phase 2)。
 
 ## 11. テスト要件
 
@@ -444,6 +471,8 @@ transforms:
 - Web GUIからのパラメータ更新テスト
 - launch起動確認
 - `ros2 topic echo /vehicle_detections`で検知情報が確認できること
+- 再生リスト解決 (`pcd_files` 優先、`pcd_directory` 展開、未指定時の単一PCDフォールバック) の単体テスト (Phase 2)
+- `loop=true` / `loop=false` でのリスト末尾挙動の単体テスト (Phase 2)
 
 ## 12. 実装フェーズ案
 
@@ -461,7 +490,7 @@ transforms:
 ### Phase 2: 実用性改善
 
 - rosbag入力対応
-- 複数PCD連続再生
+- 複数PCD連続再生 (Phase 2 の最初の対応項目。詳細は FR-011)
 - 検知結果の保存
 - 簡易トラッキング
 - パラメータプリセット管理
