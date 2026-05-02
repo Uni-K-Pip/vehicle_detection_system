@@ -1,3 +1,23 @@
+// Copyright 2026 kohei
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+// THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 #include <atomic>
 #include <chrono>
 #include <cstdint>
@@ -14,7 +34,7 @@
 #include <utility>
 #include <vector>
 
-#include <httplib.h>
+#include <httplib.h>  // NOLINT(build/include_order)  cpplint は .h で C system と誤判定
 #include <nlohmann/json.hpp>
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
@@ -122,16 +142,16 @@ public:
       return;
     }
     server_thread_ = std::thread([this]() {
-      RCLCPP_INFO(get_logger(),
+          RCLCPP_INFO(get_logger(),
         "Web GUI listening on http://%s:%d (web_root=%s)",
         host_.c_str(), gui_port_, web_root_.string().c_str());
-      const bool ok = server_.listen(host_.c_str(), gui_port_);
-      if (!ok) {
-        RCLCPP_ERROR(get_logger(),
+          const bool ok = server_.listen(host_.c_str(), gui_port_);
+          if (!ok) {
+            RCLCPP_ERROR(get_logger(),
           "Web GUI server stopped: failed to bind %s:%d",
           host_.c_str(), gui_port_);
-      }
-      server_running_ = false;
+          }
+          server_running_ = false;
     });
   }
 
@@ -179,7 +199,7 @@ private:
   {
     std::ostringstream oss;
     for (size_t i = 0; i < target_nodes_.size(); ++i) {
-      if (i > 0) oss << ", ";
+      if (i > 0) {oss << ", ";}
       oss << target_nodes_[i];
     }
     RCLCPP_INFO(get_logger(),
@@ -190,11 +210,11 @@ private:
   void register_routes()
   {
     server_.set_default_headers({
-      {"Cache-Control", "no-store"},
+        {"Cache-Control", "no-store"},
     });
 
     server_.Get("/", [this](const httplib::Request &, httplib::Response & res) {
-      res.set_content(gui_html_, "text/html; charset=utf-8");
+        res.set_content(gui_html_, "text/html; charset=utf-8");
     });
 
     server_.Get("/api/health",
@@ -219,10 +239,10 @@ private:
 
     server_.set_exception_handler(
       [this](const httplib::Request &, httplib::Response & res,
-             std::exception_ptr ep) {
+      std::exception_ptr ep) {
         std::string detail;
         try {
-          if (ep) std::rethrow_exception(ep);
+          if (ep) {std::rethrow_exception(ep);}
         } catch (const std::exception & e) {
           detail = e.what();
         } catch (...) {
@@ -269,7 +289,7 @@ private:
     try {
       auto list_future = client->list_parameters({}, 0);
       if (list_future.wait_for(milliseconds(service_timeout_ms_)) !=
-          std::future_status::ready)
+        std::future_status::ready)
       {
         out["error"] = "list_parameters timed out";
         return out;
@@ -282,7 +302,7 @@ private:
 
       auto get_future = client->get_parameters(names);
       if (get_future.wait_for(milliseconds(service_timeout_ms_)) !=
-          std::future_status::ready)
+        std::future_status::ready)
       {
         out["error"] = "get_parameters timed out";
         return out;
@@ -292,7 +312,7 @@ private:
       auto desc_future = client->describe_parameters(names);
       std::vector<rcl_interfaces::msg::ParameterDescriptor> descriptors;
       if (desc_future.wait_for(milliseconds(service_timeout_ms_)) ==
-          std::future_status::ready)
+        std::future_status::ready)
       {
         descriptors = desc_future.get();
       }
@@ -335,8 +355,8 @@ private:
     }
 
     if (!payload.is_object() ||
-        !payload.contains("node") || !payload["node"].is_string() ||
-        !payload.contains("parameters") || !payload["parameters"].is_object())
+      !payload.contains("node") || !payload["node"].is_string() ||
+      !payload.contains("parameters") || !payload["parameters"].is_object())
     {
       respond_error(res, 400,
         "expected JSON of the form {\"node\": \"/...\", \"parameters\": {...}}");
@@ -377,7 +397,7 @@ private:
     try {
       auto desc_future = client->describe_parameters(names);
       if (desc_future.wait_for(milliseconds(service_timeout_ms_)) !=
-          std::future_status::ready)
+        std::future_status::ready)
       {
         respond_error(res, 504,
           "describe_parameters timed out for '" + target + "'");
@@ -399,12 +419,12 @@ private:
       const auto & name = names[i];
       const auto & raw = params_obj.at(name);
       if (i >= descriptors.size() ||
-          descriptors[i].type ==
-            static_cast<uint8_t>(rclcpp::ParameterType::PARAMETER_NOT_SET))
+        descriptors[i].type ==
+        static_cast<uint8_t>(rclcpp::ParameterType::PARAMETER_NOT_SET))
       {
         rejected.push_back({
-          {"name", name},
-          {"reason", "parameter is not declared on the target node"},
+            {"name", name},
+            {"reason", "parameter is not declared on the target node"},
         });
         overall_ok = false;
         continue;
@@ -415,8 +435,8 @@ private:
         to_set_names.push_back(name);
       } catch (const std::exception & e) {
         rejected.push_back({
-          {"name", name},
-          {"reason", e.what()},
+            {"name", name},
+            {"reason", e.what()},
         });
         overall_ok = false;
       }
@@ -426,7 +446,7 @@ private:
       try {
         auto set_future = client->set_parameters(to_set);
         if (set_future.wait_for(milliseconds(service_timeout_ms_)) !=
-            std::future_status::ready)
+          std::future_status::ready)
         {
           respond_error(res, 504,
             "set_parameters timed out for '" + target + "'");
@@ -443,8 +463,8 @@ private:
               params_obj.at(to_set_names[i]).dump().c_str());
           } else {
             rejected.push_back({
-              {"name", to_set_names[i]},
-              {"reason", r.reason.empty() ? std::string{"rejected by node"} : r.reason},
+                {"name", to_set_names[i]},
+                {"reason", r.reason.empty() ? std::string{"rejected by node"} : r.reason},
             });
             overall_ok = false;
           }
@@ -484,7 +504,7 @@ private:
 
   rclcpp::CallbackGroup::SharedPtr callback_group_;
   std::unordered_map<std::string, rclcpp::AsyncParametersClient::SharedPtr>
-    param_clients_;
+  param_clients_;
 
   httplib::Server server_;
   std::thread server_thread_;
