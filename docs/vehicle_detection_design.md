@@ -266,6 +266,8 @@ A rendered architecture diagram is available at
 - `/vehicle_detections/raw`を購読する。
 - `send_mode`に応じてROS 2トピック、HTTP POST、両方、無効を切り替える。
 - HTTP送信失敗時も検知系を停止させない。
+- Phase 2: `save_results=true` のとき、検知結果を JSON Lines ファイルへ
+  追記する。保存処理は send_mode から独立し、`disabled` でも動作する。
 
 主要パラメータ:
 
@@ -278,6 +280,9 @@ A rendered architecture diagram is available at
 | `http_timeout_ms` | int | `1000` | `>= 1` |
 | `http_retry_count` | int | `0` | `>= 0` |
 | `http_auth_type` | string | `none` | MVPでは`none`のみ |
+| `save_results` | bool | `false` | なし (Phase 2) |
+| `result_output_path` | string | `""` | 空かつ `save_results=true` ならファイルオープン失敗扱い (Phase 2) |
+| `result_output_format` | string | `jsonl` | `jsonl` のみ。それ以外は拒否 (Phase 2) |
 
 送信モード:
 
@@ -313,6 +318,28 @@ HTTP処理:
 - retryは同一callback内で最大`http_retry_count`回だけ行う。
 - 送信は別スレッドまたは短いtimeoutで行い、検知callbackを長時間ブロックしない。
 - 失敗時はendpoint、HTTP status、例外概要を警告ログに出す。
+
+検知結果保存 (Phase 2):
+
+- 専用ヘルパー `DetectionResultWriter` を `vehicle_detection_core` ライブラリに
+  追加し、`detection_sender_node` から利用する。スキーマ生成は HTTP 経路と
+  共有する `serialize_detections()` (1 行 JSON) をそのまま再利用する。
+  保存形式は MVP では JSON Lines (`.jsonl`) のみ対応する。
+- ファイルは `std::ofstream` を `std::ios::out | app | binary` で開き、
+  改行は `'\n'` 固定とする。1 receive callback ごとに `serialize_detections()`
+  の結果を 1 行追記する。
+- `save_results=true` への遷移時、または `result_output_path` /
+  `result_output_format` の更新時に、ヘルパーを再構成する。
+- `result_output_format` が `jsonl` 以外なら、起動時とパラメータ更新時に
+  拒否する (`SetParametersResult.successful=false`)。
+- ファイルオープンに失敗した場合 (空パス、親ディレクトリ未存在、権限不足など)
+  は、ヘルパーが内部状態を「無効」に戻し、ノードは警告ログを出して
+  パラメータ更新自体は受理する。`detection_sender_node` はクラッシュさせない。
+- 保存処理は `send_mode` から独立して動作する。`send_mode=disabled` でも
+  `save_results=true` なら保存される。
+- 受信 callback 内で `writer_.append(payload)` を呼ぶ。失敗時は throttled
+  warning を出し、ROS topic / HTTP 送信は通常通り続行する。連続再生
+  (FR-011) でも、各 publish された検知配列が publish 順に append される。
 
 ### 6.4 `parameter_bridge_node`
 
@@ -499,6 +526,7 @@ PandaSet公式サイトは、PandaSetを自動運転向けopen-source datasetと
 | 車両判定 | 境界値、範囲外除外 |
 | HTTP JSON変換 | 必須フィールド、空検知配列 |
 | 再生リスト解決 (Phase 2) | `pcd_files`優先、`pcd_directory`展開、未指定時の単一PCDフォールバック、欠落ファイル拒否、`loop`末尾挙動 |
+| 検知結果保存 (Phase 2) | 無効時 no-op、JSONL 1 行 append、複数 append の順序保持、不正パス時 no-throw、未対応フォーマット拒否 |
 
 ROS統合テスト:
 
@@ -548,6 +576,7 @@ ros2 param set /vehicle_detector_node voxel_leaf_size 0.25
 | FR-003 点群前処理 | 6.2章、12章 |
 | FR-004 普通車候補検知 | 6.2章 |
 | FR-005 検知情報送信 | 6.3章 |
+| FR-012 検知結果の保存 (Phase 2) | 6.3章「検知結果保存」、12章 |
 | FR-006 可視化 | 5章、6.2章、7章 |
 | FR-007 GUIによるパラメータ調整 | 6.4章 |
 | FR-008 設定ファイル | 8章、`config/detector_params.yaml` |

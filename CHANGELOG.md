@@ -4,9 +4,10 @@
 
 ## [Unreleased]
 
-Phase 2 実用性改善のうち「複数PCD連続再生」(FR-011) を対象とする。
-残りの Phase 2 項目 (rosbag 入力、検知結果保存、簡易トラッキング、
-パラメータプリセット、HTTP payload schema バージョン管理) は本範囲外。
+Phase 2 実用性改善のうち「複数PCD連続再生」(FR-011) と「検知結果の保存」
+(FR-012) を対象とする。残りの Phase 2 項目 (rosbag 入力、簡易
+トラッキング、パラメータプリセット、HTTP payload schema バージョン管理)
+は本範囲外。
 
 ### Added
 
@@ -27,6 +28,30 @@ Phase 2 実用性改善のうち「複数PCD連続再生」(FR-011) を対象と
   拒否、空文字エントリの拒否、ワイルドカードマッチをカバーする。
 - `test_launch_description.py` で新規 launch 引数 (`pcd_directory`、
   `pcd_glob`、`loop`) の存在を検証するようにした。
+- `detection_sender_node` に検知結果のローカルファイル保存機能を追加
+  (FR-012)。新規パラメータ `save_results` (bool、初期値 `false`)、
+  `result_output_path` (string、初期値 `""`)、`result_output_format`
+  (string、初期値 `jsonl`)。`save_results=true` のとき、各検知配列を
+  HTTP payload と同一構造の JSON Lines (1 フレーム 1 行) として
+  保存先ファイルへ追記する。`send_mode` から独立して動作するため、
+  `disabled` でも保存できる。複数 PCD 連続再生 (FR-011) 中も publish
+  順に append される。
+- `vehicle_detection_core` 共通ライブラリに `DetectionResultWriter`
+  (`detection_result_writer.{hpp,cpp}`) を追加。スキーマ生成は既存の
+  `serialize_detections()` を再利用し、`std::ofstream` の append +
+  binary モードで `'\n'` 区切りで書き込む。設定不正・ファイルオープン
+  失敗・書き込み失敗のいずれも例外を出さず、`last_error()` 経由で
+  原因を返す。
+- `test_detection_result_writer` GTest スイート: 既定無効、無効化時の
+  no-op、JSONL 1 行 append、複数 append の順序保持、フォーマット名
+  解析 (`jsonl` 受理 / それ以外拒否)、空パス拒否、ディレクトリへの
+  オープン失敗、再構成での旧ファイルクローズ、フォーマット拒否時の
+  保存無効化をカバーする。
+- `config/detector_params.yaml` の `detection_sender_node` セクションに
+  `save_results`、`result_output_path`、`result_output_format` の
+  既定値とコメントを追加。
+- `docs/payload_schema.md` に JSONL 保存形式 (1 フレーム 1 行、HTTP
+  payload と同一構造) の説明を追加。
 
 ### Changed
 
@@ -36,6 +61,11 @@ Phase 2 実用性改善のうち「複数PCD連続再生」(FR-011) を対象と
 - `config/detector_params.yaml` の `pcd_loader_node` セクションに
   `pcd_files`、`pcd_directory`、`pcd_glob`、`loop` の既定値とコメント
   を追加。
+- `detection_sender_node` は、検知 callback の冒頭で `save_results` が
+  有効なら保存ヘルパーへ payload を append するようになった。
+  `result_output_format` への不正値は起動時とパラメータ更新時に拒否
+  する一方で、保存先パスのオープン失敗は警告ログのみで吸収し、
+  ROS / HTTP 送信側の挙動は維持する。
 
 ## v1.0.0 - 2026-05-02
 

@@ -239,6 +239,37 @@ src/
 - 各 publish 時に、現在のインデックスとファイルパスをログ出力すること。
 - 単一PCD再生 (`pcd_files` および `pcd_directory` 未指定) の挙動は MVP と完全に同一であること。
 
+### FR-012 検知結果の保存 (Phase 2)
+
+`detection_sender_node` は、ROS 2 トピック送信および HTTP POST に加えて、
+検知結果をローカルファイルへ追記保存できる。実行後にオフラインで検知結果を
+検査し、複数のパラメータ設定や PCD セットを比較する用途を想定する。
+
+- 保存形式は MVP 時点では JSON Lines (`.jsonl`) のみ対応すること。
+- 1 フレーム分の `vision_msgs/msg/Detection3DArray` を、1 行の JSON
+  オブジェクトとしてファイル末尾に追記すること。
+- 1 行の JSON は、HTTP POST と同一の payload 構造
+  (`docs/payload_schema.md` 参照) を使用し、シリアライザ実装を共有すること
+  (重複実装を避ける)。
+- 以下のパラメータを `detection_sender_node` に追加すること。
+  - `save_results` (bool, 初期値 `false`): 検知結果保存を有効化する。
+  - `result_output_path` (string, 初期値 `""`): 保存先ファイルパス。
+  - `result_output_format` (string, 初期値 `jsonl`): 保存形式。MVP では
+    `jsonl` のみ受け付ける。
+- `save_results=false` の場合、ファイルへの書き込みは一切発生せず、
+  既存挙動 (ROS 2 / HTTP / disabled の各 send_mode) を変えないこと。
+- `save_results=true` で保存先ファイルを開けない場合 (パスが空、親
+  ディレクトリが存在しない、書き込み権限がないなど) でも、ノードを
+  クラッシュさせず、原因を含む警告ログを出して保存だけを停止すること。
+  ROS 2 トピック送信、HTTP 送信、デバッグ publish の挙動は影響を受けない
+  こと。
+- 保存ファイルは追記モードで開くこと。同じパスで再起動した場合、後続の
+  実行のフレームが既存ファイルの末尾に追加されること。
+- 複数PCD連続再生 (FR-011) 中でも、publish された各検知結果が publish
+  順に append されること。
+- `result_output_format` に `jsonl` 以外を指定した場合は、起動時およびパラメータ
+  変更時に拒否すること。
+
 ## 6. パラメータ要件
 
 | パラメータ | 説明 | 初期値案 |
@@ -287,6 +318,9 @@ src/
 | `http_timeout_ms` | HTTP送信timeout [ms] | `1000` |
 | `http_retry_count` | HTTP送信retry回数 | `0` |
 | `http_auth_type` | HTTP認証方式 | `none` |
+| `save_results` | 検知結果のファイル保存を有効化 (Phase 2) | `false` |
+| `result_output_path` | 保存先ファイルパス (Phase 2) | `""` |
+| `result_output_format` | 保存形式: `jsonl` (Phase 2) | `jsonl` |
 | `gui_port` | Web GUIの待受ポート | `8081` |
 
 ## 7. 非機能要件
@@ -456,6 +490,9 @@ transforms:
 - `pcd_files` または `pcd_directory` で複数PCDを指定したとき、`publish_rate_hz` の周期で順次 publish されること (Phase 2)。
 - `loop=true` でリスト末尾の次に先頭に戻り、`loop=false` でリスト末尾以降は publish が止まること (Phase 2)。
 - 複数PCD指定時に、`pcd_files` も `pcd_directory` も未指定の MVP 単一PCD再生の挙動が変わらないこと (Phase 2)。
+- `save_results=true`、`result_output_path` 指定時に、各検知フレームが JSON Lines ファイルへ 1 行ずつ追記されること (Phase 2)。
+- `save_results=false` の場合、保存先ファイルへの書き込みが行われず既存挙動が変わらないこと (Phase 2)。
+- `save_results=true` で開けない保存先パスを指定しても、`detection_sender_node` がクラッシュせず警告ログを出して動作を継続すること (Phase 2)。
 
 ## 11. テスト要件
 
@@ -473,6 +510,7 @@ transforms:
 - `ros2 topic echo /vehicle_detections`で検知情報が確認できること
 - 再生リスト解決 (`pcd_files` 優先、`pcd_directory` 展開、未指定時の単一PCDフォールバック) の単体テスト (Phase 2)
 - `loop=true` / `loop=false` でのリスト末尾挙動の単体テスト (Phase 2)
+- 検知結果保存ヘルパーの単体テスト: 無効化時の no-op、有効時の JSONL append、不正パス時の no-throw、未対応フォーマット拒否 (Phase 2)
 
 ## 12. 実装フェーズ案
 

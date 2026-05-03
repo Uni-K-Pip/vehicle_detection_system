@@ -94,9 +94,9 @@
 ## v1.1.0 - Phase 2 実用性改善 (進行中)
 
 要件定義書 12 章「Phase 2: 実用性改善」項目のうち、本リリースでは
-「複数PCD連続再生」のみを対象とする。残りの項目 (rosbag 入力、検知結果
-保存、簡易トラッキング、パラメータプリセット、HTTP payload schema の
-バージョン管理) は本リリースには含めず、後続リリースで取り扱う。
+「複数PCD連続再生」と「検知結果の保存」を対象とする。残りの項目
+(rosbag 入力、簡易トラッキング、パラメータプリセット、HTTP payload
+schema のバージョン管理) は本リリースには含めず、後続リリースで取り扱う。
 
 - [x] 複数PCD連続再生 (FR-011)
   - [x] `pcd_loader_node` に再生リスト機構を追加する
@@ -105,3 +105,14 @@
   - [x] 再生リスト解決のユニットテストを追加する
         (`test_pcd_playlist`)
   - [x] 要件・設計・README・CHANGELOG に追記する
+- [x] 検知結果の保存 (FR-012)
+  - [x] `detection_sender_node` に検知結果保存パラメータを追加する
+        (`save_results` / `result_output_path` / `result_output_format`)
+  - [x] HTTP payload と同一構造の JSON Lines を 1 フレーム 1 行で
+        append する `DetectionResultWriter` ヘルパーを追加する
+  - [x] `save_results=false` の場合は既存挙動を変えない
+  - [x] 開けない保存先パスでも `detection_sender_node` をクラッシュ
+        させず警告ログを出す
+  - [x] `DetectionResultWriter` の単体テストを追加する
+        (`test_detection_result_writer`)
+  - [x] 要件・設計・CHANGELOG に追記する

@@ -51,3 +51,21 @@ Content-Type: application/json
   タイムアウトはログに記録するが、ROS コールバックはブロックしない
   (送信は最大 32 ペイロードの固定キューを持つバックグラウンドワーカー
   スレッド上で実行される)。
+
+## ローカル保存 (JSON Lines, Phase 2)
+
+`detection_sender_node` は `save_results=true` のとき、上記と同じ JSON
+ボディを 1 フレーム 1 行として、`result_output_path` で指定した
+JSON Lines (`.jsonl`) ファイル末尾へ追記する。スキーマは HTTP POST と
+同一実装 (`serialize_detections`) を共有するため、HTTP の payload を
+そのままファイル化したものと等価である。
+
+- ファイルは追記モードで開くため、同一パスでの再起動はファイル末尾に
+  続けて書き込む。
+- 改行は `\n` 固定。ファイルは UTF-8 想定。
+- 保存処理は `send_mode` と独立しているため、`send_mode=disabled` でも
+  保存できる。ファイルが開けない場合 (空パス、親ディレクトリなし、
+  権限不足など) は警告ログを出し、保存だけが停止する。ROS 送信と
+  HTTP 送信の挙動には影響しない。
+- `result_output_format` は `jsonl` のみ受け付ける。それ以外は起動時と
+  パラメータ更新時に拒否される。
