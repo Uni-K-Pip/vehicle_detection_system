@@ -83,6 +83,11 @@ public:
     snapshot_ = build_snapshot_from_parameters();
     enforce_initial_parameters();
 
+    // Configure the writer before creating the subscription so the very
+    // first on_detections call sees an open file (when save_results is
+    // enabled via YAML).
+    apply_writer_config(snapshot_);
+
     const auto qos = rclcpp::QoS(rclcpp::KeepLast(10)).reliable();
 
     detections_pub_ = create_publisher<vision_msgs::msg::Detection3DArray>(
@@ -100,7 +105,6 @@ public:
         std::placeholders::_1));
 
     ensure_http_worker_started(snapshot_.send_mode);
-    apply_writer_config(snapshot_);
 
     log_startup_summary();
   }
