@@ -54,6 +54,7 @@ endif()
 add_library(vehicle_detection_core
   src/parameter_validation.cpp
   src/detection_json.cpp
+  src/detection_result_writer.cpp
   src/http_client.cpp
   src/parameter_json.cpp
   src/pcd_playlist.cpp
@@ -216,6 +217,16 @@ if(BUILD_TESTING)
     vehicle_detection_core
   )
   target_include_directories(test_detection_json PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+  )
+
+  ament_add_gtest(test_detection_result_writer
+    test/test_detection_result_writer.cpp
+  )
+  target_link_libraries(test_detection_result_writer
+    vehicle_detection_core
+  )
+  target_include_directories(test_detection_result_writer PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
   )
 
