@@ -68,7 +68,7 @@ public:
     load_index(0);
     if (!cached_msg_) {
       const auto reason = std::string{"failed to load first PCD entry: "} +
-        playlist_.front();
+      playlist_.front();
       throw std::runtime_error(reason);
     }
 
