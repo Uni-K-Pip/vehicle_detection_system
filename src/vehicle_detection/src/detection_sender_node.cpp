@@ -38,6 +38,7 @@
 #include <vision_msgs/msg/detection3_d_array.hpp>
 
 #include "vehicle_detection/detection_json.hpp"
+#include "vehicle_detection/detection_result_writer.hpp"
 #include "vehicle_detection/http_client.hpp"
 #include "vehicle_detection/parameter_validation.hpp"
 
@@ -99,6 +100,7 @@ public:
         std::placeholders::_1));
 
     ensure_http_worker_started(snapshot_.send_mode);
+    apply_writer_config(snapshot_);
 
     log_startup_summary();
   }
@@ -125,6 +127,9 @@ private:
     std::int64_t http_timeout_ms;
     std::int64_t http_retry_count;
     std::string http_auth_type;
+    bool save_results;
+    std::string result_output_path;
+    std::string result_output_format;
   };
 
   void declare_parameters_with_defaults()
@@ -138,6 +143,9 @@ private:
     declare_parameter<std::int64_t>("http_timeout_ms", 1000);
     declare_parameter<std::int64_t>("http_retry_count", 0);
     declare_parameter<std::string>("http_auth_type", "none");
+    declare_parameter<bool>("save_results", false);
+    declare_parameter<std::string>("result_output_path", "");
+    declare_parameter<std::string>("result_output_format", "jsonl");
   }
 
   Snapshot build_snapshot_from_parameters() const
@@ -149,6 +157,10 @@ private:
     s.http_timeout_ms = get_parameter("http_timeout_ms").as_int();
     s.http_retry_count = get_parameter("http_retry_count").as_int();
     s.http_auth_type = get_parameter("http_auth_type").as_string();
+    s.save_results = get_parameter("save_results").as_bool();
+    s.result_output_path = get_parameter("result_output_path").as_string();
+    s.result_output_format =
+      get_parameter("result_output_format").as_string();
     return s;
   }
 
@@ -171,6 +183,15 @@ private:
       throw std::invalid_argument(
               "http_endpoint_url must be a valid http:// URL");
     }
+    // result_output_format is rejected strictly so unsupported names do
+    // not silently disable saving. Path-open failures are handled at
+    // configure time and downgraded to warnings so the node keeps
+    // running.
+    const auto fmt_check = parse_detection_result_format(
+      snapshot_.result_output_format, nullptr);
+    if (!fmt_check.ok) {
+      throw std::invalid_argument(fmt_check.reason);
+    }
   }
 
   std::string get_string_param(const std::string & name) const
@@ -184,11 +205,16 @@ private:
     RCLCPP_INFO(
       get_logger(),
       "detection_sender_node ready: mode='%s', endpoint='%s', "
-      "timeout=%" PRId64 " ms, retries=%" PRId64,
+      "timeout=%" PRId64 " ms, retries=%" PRId64
+      ", save_results=%s, result_output_path='%s', "
+      "result_output_format='%s'",
       snapshot_.send_mode.c_str(),
       snapshot_.http_endpoint_url.c_str(),
       snapshot_.http_timeout_ms,
-      snapshot_.http_retry_count);
+      snapshot_.http_retry_count,
+      snapshot_.save_results ? "true" : "false",
+      snapshot_.result_output_path.c_str(),
+      snapshot_.result_output_format.c_str());
   }
 
   rcl_interfaces::msg::SetParametersResult on_parameter_change(
@@ -203,6 +229,7 @@ private:
       candidate = snapshot_;
     }
 
+    bool writer_inputs_changed = false;
     for (const auto & p : params) {
       const auto & name = p.get_name();
       if (name == "send_mode") {
@@ -217,6 +244,15 @@ private:
         candidate.http_retry_count = p.as_int();
       } else if (name == "http_auth_type") {
         candidate.http_auth_type = p.as_string();
+      } else if (name == "save_results") {
+        candidate.save_results = p.as_bool();
+        writer_inputs_changed = true;
+      } else if (name == "result_output_path") {
+        candidate.result_output_path = p.as_string();
+        writer_inputs_changed = true;
+      } else if (name == "result_output_format") {
+        candidate.result_output_format = p.as_string();
+        writer_inputs_changed = true;
       }
     }
 
@@ -245,12 +281,24 @@ private:
       RCLCPP_WARN(get_logger(), "rejected parameter update: %s", result.reason.c_str());
       return result;
     }
+    const auto fmt_check = parse_detection_result_format(
+      candidate.result_output_format, nullptr);
+    if (!fmt_check.ok) {
+      result.successful = false;
+      result.reason = fmt_check.reason;
+      RCLCPP_WARN(get_logger(), "rejected parameter update: %s",
+        fmt_check.reason.c_str());
+      return result;
+    }
 
     {
       std::lock_guard<std::mutex> lock(snapshot_mutex_);
       snapshot_ = candidate;
     }
     ensure_http_worker_started(candidate.send_mode);
+    if (writer_inputs_changed) {
+      apply_writer_config(candidate);
+    }
     return result;
   }
 
@@ -263,6 +311,35 @@ private:
       return;
     }
     worker_ = std::thread(&DetectionSenderNode::http_worker_loop, this);
+  }
+
+  // Apply save_results / result_output_path / result_output_format to the
+  // writer. Format errors are caught earlier as parameter rejections, so
+  // here we only need to handle file-open failures: warn and disable
+  // saving without throwing so the rest of the node keeps running.
+  void apply_writer_config(const Snapshot & snap)
+  {
+    DetectionResultWriterConfig wcfg;
+    wcfg.enabled = snap.save_results;
+    wcfg.path = snap.result_output_path;
+    // Format string is validated upstream; the second parse only
+    // resolves the textual name into the enum.
+    (void)parse_detection_result_format(
+      snap.result_output_format, &wcfg.format);
+
+    const auto r = writer_.configure(wcfg);
+    if (!r.ok) {
+      RCLCPP_WARN(
+        get_logger(),
+        "save_results disabled: %s", r.reason.c_str());
+      return;
+    }
+    if (snap.save_results) {
+      RCLCPP_INFO(
+        get_logger(),
+        "save_results enabled: writing JSONL to '%s'",
+        snap.result_output_path.c_str());
+    }
   }
 
   Snapshot copy_snapshot() const
@@ -307,6 +384,22 @@ private:
     const vision_msgs::msg::Detection3DArray::SharedPtr msg)
   {
     const Snapshot snap = copy_snapshot();
+
+    // Saving is independent of send_mode so disabled / ros_topic /
+    // http / both can all produce a JSONL audit file.
+    if (snap.save_results) {
+      const auto payload = to_json_payload(*msg);
+      if (!writer_.append(payload)) {
+        // Throttled: a wrong path or full disk should not flood the
+        // log. last_error() is set by the writer the first time the
+        // failure occurred.
+        RCLCPP_WARN_THROTTLE(
+          get_logger(), *get_clock(), 5000,
+          "save_results: append failed: %s",
+          writer_.last_error().c_str());
+      }
+    }
+
     if (snap.send_mode == kSendModeDisabled) {
       return;
     }
@@ -394,6 +487,8 @@ private:
   std::deque<std::string> queue_;
   bool stop_flag_;
   std::thread worker_;
+
+  DetectionResultWriter writer_;
 };
 
 }  // namespace vehicle_detection

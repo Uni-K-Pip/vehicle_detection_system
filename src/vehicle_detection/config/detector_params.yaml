@@ -63,6 +63,15 @@ detection_sender_node:
     http_timeout_ms: 1000
     http_retry_count: 0
     http_auth_type: none
+    # Phase 2 detection result saving (FR-012). When save_results=true,
+    # each detection frame is appended as one JSONL line to
+    # result_output_path. Saving is independent of send_mode (works even
+    # with send_mode=disabled). result_output_format must be 'jsonl'.
+    # File-open failures are logged as warnings; the node keeps running
+    # and the ROS / HTTP send paths are unaffected.
+    save_results: false
+    result_output_path: ""
+    result_output_format: jsonl
 
 parameter_bridge_node:
   ros__parameters:
