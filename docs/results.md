@@ -40,7 +40,7 @@
 
 `colcon test --merge-install --packages-select vehicle_detection` の
 最新フル実行 (Jazzy + Docker) の結果は
-**201 tests, 0 errors, 0 failures, 24 skipped**。実行されるテスト:
+**211 tests, 0 errors, 0 failures, 24 skipped**。実行されるテスト:
 
 - `test_parameter_validation` — パラメータ検証ヘルパーに対する GTest
   単体テスト
