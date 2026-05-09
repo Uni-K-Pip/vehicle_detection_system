@@ -94,9 +94,9 @@
 ## v1.1.0 - Phase 2 実用性改善 (進行中)
 
 要件定義書 12 章「Phase 2: 実用性改善」項目のうち、本リリースでは
-「複数PCD連続再生」と「検知結果の保存」を対象とする。残りの項目
-(rosbag 入力、簡易トラッキング、パラメータプリセット、HTTP payload
-schema のバージョン管理) は本リリースには含めず、後続リリースで取り扱う。
+「複数PCD連続再生」、「検知結果の保存」、および「HTTP payload schema の
+バージョン管理」を対象とする。残りの項目 (rosbag 入力、簡易トラッキング、
+パラメータプリセット) は本リリースには含めず、後続リリースで取り扱う。
 
 - [x] 複数PCD連続再生 (FR-011)
   - [x] `pcd_loader_node` に再生リスト機構を追加する
@@ -116,3 +116,15 @@ schema のバージョン管理) は本リリースには含めず、後続リ�
   - [x] `DetectionResultWriter` の単体テストを追加する
         (`test_detection_result_writer`)
   - [x] 要件・設計・CHANGELOG に追記する
+- [x] HTTP payload schema のバージョン管理 (FR-013)
+  - [x] `serialize_detections` の出力ルートに `schema_version`
+        フィールドを追加し、初期値 `"1.0"` を実装側定数として
+        一元管理する
+  - [x] HTTP POST と JSON Lines 保存の両経路で同じ `schema_version`
+        が出力されるようにする (シリアライザ共有)
+  - [x] 既存ルートフィールド (`timestamp`、`frame_id`、`detections`)
+        とサブフィールドを削除・リネーム・意味変更しない
+  - [x] 検知 0 件と検知 1 件以上の payload で `schema_version` が
+        出力されることをユニットテストで確認する
+  - [x] 要件 (FR-013)、設計、`docs/payload_schema.md` の version
+        history、CHANGELOG に追記する
