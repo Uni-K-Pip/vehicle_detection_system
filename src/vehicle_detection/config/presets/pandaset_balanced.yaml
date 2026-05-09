@@ -1,0 +1,29 @@
+# pandaset_balanced preset (FR-014)
+#
+# Detection parameters validated on the bundled PandaSet PCD subset
+# (docs/results.md records 7 vehicle detections per representative
+# frame, ~160 ms per-frame processing time using these values).
+# This preset is an explicit snapshot so that future tuning of
+# detector_params.yaml does not silently shift the PandaSet demo.
+#
+# Range: long-range road scene (~80 m forward, ±30 m lateral).
+# Targets: ordinary passenger vehicles only (FR-004).
+vehicle_detector_node:
+  ros__parameters:
+    voxel_leaf_size: 0.2
+    roi_min_x: 0.0
+    roi_max_x: 80.0
+    roi_min_y: -30.0
+    roi_max_y: 30.0
+    roi_min_z: -3.0
+    roi_max_z: 3.0
+    ground_distance_threshold: 0.2
+    cluster_tolerance: 0.8
+    cluster_min_size: 20
+    cluster_max_size: 5000
+    vehicle_min_length: 2.0
+    vehicle_max_length: 6.0
+    vehicle_min_width: 1.2
+    vehicle_max_width: 2.8
+    vehicle_min_height: 1.0
+    vehicle_max_height: 3.0

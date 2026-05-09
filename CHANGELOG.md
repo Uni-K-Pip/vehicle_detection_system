@@ -5,12 +5,36 @@
 ## [Unreleased]
 
 Phase 2 実用性改善のうち「複数PCD連続再生」(FR-011)、「検知結果の保存」
-(FR-012)、および「HTTP payload schema のバージョン管理」(FR-013) を
-対象とする。残りの Phase 2 項目 (rosbag 入力、簡易トラッキング、
-パラメータプリセット) は本範囲外。
+(FR-012)、「HTTP payload schema のバージョン管理」(FR-013)、および
+「パラメータプリセット管理」(FR-014) を対象とする。残りの Phase 2 項目
+(rosbag 入力、簡易トラッキング) は本範囲外。
 
 ### Added
 
+- 検知パラメータプリセット管理を追加 (FR-014)。launch 引数
+  `detector_preset` (string、初期値 `default`) で
+  `src/vehicle_detection/config/presets/<name>.yaml` を
+  `vehicle_detector_node` の `parameters=` に追加で渡す。プリセットは
+  `detector_params.yaml` のオーバーレイとして適用されるため、ベース YAML →
+  プリセット → 個別 launch 引数の順で「後勝ち」マージされる。
+- 同梱プリセット 3 種を追加:
+  - `default.yaml`: no-op オーバーレイ。既存の
+    `ros2 launch vehicle_detection vehicle_detection.launch.py` の挙動を
+    そのまま維持する。
+  - `pandaset_balanced.yaml`: 同梱 PandaSet PCD デモ向けに検証済みの検知
+    パラメータ (現在の `detector_params.yaml` の値の明示的なスナップ
+    ショット)。
+  - `near_range.yaml`: 近距離 (約 20 m) で軽量に検知挙動を確認するための
+    ROI と clustering 設定。
+- `vehicle_detection.launch.py` に `_resolve_preset_path()` ヘルパーと
+  `_resolve_detector_preset` OpaqueFunction を追加。指定された
+  `detector_preset` を `config/presets/<name>.yaml` の絶対パスに解決し、
+  不明なプリセット名のときは指定名と利用可能なプリセット一覧を含む
+  エラーで launch を失敗させる。
+- `test_launch_description.py` に `detector_preset` launch 引数の宣言、
+  既知プリセット (`default` / `pandaset_balanced` / `near_range`) の解決、
+  不明プリセットの `ValueError`、プリセットファイルの存在確認テストを
+  追加。
 - HTTP POST payload と JSON Lines 保存 payload のルートに
   `schema_version` (string) フィールドを追加 (FR-013)。初期値は
   `"1.0"`。値は `detection_json` 実装側の定数
@@ -72,6 +96,15 @@ Phase 2 実用性改善のうち「複数PCD連続再生」(FR-011)、「検知�
 
 ### Changed
 
+- `vehicle_detection.launch.py` の `vehicle_detector_node` の
+  `parameters=` リストに、`detector_preset` から解決したプリセット YAML
+  (絶対パス) を `params_file` の後ろに追加した (FR-014)。これにより
+  ベース YAML → プリセット → 個別 launch 引数の順で「後勝ち」マージが
+  行われる。`detector_preset:=default` (既定) は no-op オーバーレイの
+  ため、未指定時の挙動は MVP / 既存 Phase 2 と同一に維持される。
+  プリセット YAML は `vehicle_detector_node` のみに渡し、他ノード
+  (`pcd_loader_node`、`detection_sender_node`、`parameter_bridge_node`)
+  には影響しない。
 - `serialize_detections()` のルート JSON 出力に `schema_version` を
   先頭フィールドとして追加した (FR-013)。既存フィールドの順序・名前・
   意味は変えていないため、既存受信側は無視するだけで動作する

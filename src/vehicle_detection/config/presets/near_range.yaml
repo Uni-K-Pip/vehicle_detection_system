@@ -1,0 +1,30 @@
+# near_range preset (FR-014)
+#
+# Lightweight near-range configuration (~20 m forward, ±10 m lateral)
+# intended for quick visual sanity checks: smaller ROI keeps voxel,
+# clustering, and RANSAC fast on a single PCD without scanning the
+# full forward range.
+#
+# Detection target stays "ordinary passenger vehicle" - the same
+# vehicle_min/max_length/width/height as the default preset are used
+# so this preset does not shift the detection class. Only ROI and
+# the related grid / cluster sizes are tightened.
+vehicle_detector_node:
+  ros__parameters:
+    voxel_leaf_size: 0.15
+    roi_min_x: 0.0
+    roi_max_x: 20.0
+    roi_min_y: -10.0
+    roi_max_y: 10.0
+    roi_min_z: -3.0
+    roi_max_z: 3.0
+    ground_distance_threshold: 0.2
+    cluster_tolerance: 0.6
+    cluster_min_size: 15
+    cluster_max_size: 3000
+    vehicle_min_length: 2.0
+    vehicle_max_length: 6.0
+    vehicle_min_width: 1.2
+    vehicle_max_width: 2.8
+    vehicle_min_height: 1.0
+    vehicle_max_height: 3.0

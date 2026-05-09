@@ -313,6 +313,19 @@ HTTP payload:
 }
 ```
 
+プリセット管理に関する補足 (Phase 2, FR-014):
+
+- `vehicle_detector_node` の検知パラメータは、`config/detector_params.yaml`
+  をベースに `config/presets/<name>.yaml` をオーバーレイ適用して決定する。
+- 既存の `params_file` launch 引数による上書きは引き続き有効。プリセットは
+  `params_file` の上に追加で適用されるため、`params_file` で指定した値の
+  うちプリセットが触らないキーはそのまま残る。
+- プリセットは `vehicle_detector_node` のみに適用する。`pcd_loader_node`、
+  `detection_sender_node`、`parameter_bridge_node` のパラメータには影響
+  しないことを launch 設計で保証する (Node に渡す parameters list 上で、
+  プリセット YAML を読み込むのは `vehicle_detector_node` だけ)。
+- 詳細なプリセット仕様は次節「7.1 プリセット設計」で扱う。
+
 Payload schema バージョン管理 (Phase 2, FR-013):
 
 - `serialize_detections()` は出力 JSON のルートに `schema_version` を
@@ -439,6 +452,7 @@ launch引数:
 | `use_gui` | `true` | Web GUI起動 |
 | `use_rviz` | `false` | RViz2起動 |
 | `rviz_config` | `config/rviz_vehicle_detection.rviz` | RViz設定 |
+| `detector_preset` | `default` | 検知パラメータプリセット名 (Phase 2、FR-014) |
 
 launch処理:
 
@@ -454,6 +468,81 @@ TF設定:
 - `transforms.yaml`の`parent_frame_id`を`map`、`child_frame_id`を`lidar`として扱う。
 - `x y z yaw pitch roll parent child`の順序ではなく、使用するROS 2 Jazzyの`static_transform_publisher --x --y --z --roll --pitch --yaw --frame-id --child-frame-id`形式で明示指定する。
 - 設定が欠けていて`use_identity_if_missing=true`ならidentity transformを起動する。
+
+### 7.1 プリセット設計 (Phase 2, FR-014)
+
+検知パラメータの代表的な組み合わせを「プリセット」として名前付きで管理し、
+launch 引数 `detector_preset` から切り替える。プリセットは launch / YAML
+ベースの読み取り専用機能とする。
+
+ファイル配置:
+
+```text
+src/vehicle_detection/config/
+  detector_params.yaml          # ベース設定 (全ノード)
+  presets/
+    default.yaml                # no-op オーバーレイ (既定の挙動を維持)
+    pandaset_balanced.yaml      # PandaSet PCD デモ用に検証済みの値
+    near_range.yaml             # 近距離・軽量確認向けの ROI / clustering
+```
+
+`config/` ディレクトリは既存の install ルール
+(`install(DIRECTORY launch config rviz web ...)`) でサブディレクトリも含めて
+share へインストールされるため、CMakeLists.txt 側の追加設定は不要。
+
+launch 引数:
+
+| 引数 | 初期値 | 用途 |
+| --- | --- | --- |
+| `detector_preset` | `default` | プリセット名 (`presets/<name>.yaml` を参照) |
+
+解決ロジック (`_resolve_detector_preset` OpaqueFunction):
+
+1. `LaunchConfiguration('detector_preset')` を `perform()` で取得する。
+2. `get_package_share_directory('vehicle_detection') / 'config' / 'presets'`
+   配下から `<name>.yaml` を探す。
+3. ファイルが存在すれば、絶対パスを `LaunchConfiguration('detector_preset_file')`
+   としてコンテキストに格納する。
+4. 存在しなければ、指定名と `presets/*.yaml` から拾った利用可能な名前の
+   一覧を含む `RuntimeError` を投げ、launch を失敗させる。
+
+`vehicle_detector_node` の `parameters=` には、ベース YAML、解決された
+プリセット YAML、launch 引数の dict をこの順で渡す。ROS 2 launch の
+パラメータマージは「後勝ち」のため、
+
+```text
+detector_params.yaml  →  presets/<name>.yaml  →  個別の launch 引数 (dict)
+```
+
+の優先順位でマージされる。`pcd_loader_node`、`detection_sender_node`、
+`parameter_bridge_node` の `parameters=` にはプリセット YAML を渡さないため、
+プリセットは検知パラメータ以外には影響しない。
+
+各プリセットの方針:
+
+| プリセット | 想定ユースケース | 内容 |
+| --- | --- | --- |
+| `default` | 既存の `detector_params.yaml` をそのまま使う (FR-014 の互換性確保) | `vehicle_detector_node: ros__parameters: {}` の no-op オーバーレイ |
+| `pandaset_balanced` | 同梱の PandaSet PCD デモ | `detector_params.yaml` 現在の検証済み値を明示的にスナップショット |
+| `near_range` | 近距離 (約 20 m) で軽量に検知挙動を確認したいとき | ROI を狭め、`cluster_min_size` を下げ、`voxel_leaf_size` を細かく |
+
+プリセット YAML には `vehicle_detector_node:` 配下の検知パラメータのみ
+記載する。HTTP 送信、検知結果保存、Web GUI、PCD 再生のキーは含めない。
+
+異常時:
+
+- 不明なプリセット名: launch を起動失敗させ、原因をスタックトレースに残す。
+- プリセットファイルが空 / 不正な YAML: ROS 2 launch の YAML パーサが
+  起動時に検出して落ちる。これはプリセットを編集した開発者向けのエラー
+  であり、利用者向けの常用ケースではない。
+
+テスト観点:
+
+- `detector_preset` launch 引数が宣言されていること (pytest スモークテスト)。
+- `presets/` 配下に `default.yaml` / `pandaset_balanced.yaml` /
+  `near_range.yaml` が存在すること。
+- 不明なプリセット名で `_resolve_preset_path` が `ValueError` を投げること
+  (ヘルパー関数を直接呼び出す pytest)。
 
 ## 8. 設定ファイル設計
 
@@ -544,6 +633,7 @@ PandaSet公式サイトは、PandaSetを自動運転向けopen-source datasetと
 | HTTP JSON変換 | 必須フィールド、空検知配列、`schema_version` の有無と値 (Phase 2, FR-013) |
 | 再生リスト解決 (Phase 2) | `pcd_files`優先、`pcd_directory`展開、未指定時の単一PCDフォールバック、欠落ファイル拒否、`loop`末尾挙動 |
 | 検知結果保存 (Phase 2) | 無効時 no-op、JSONL 1 行 append、複数 append の順序保持、不正パス時 no-throw、未対応フォーマット拒否 |
+| プリセット解決 (Phase 2、FR-014) | 既知プリセット名で絶対パスが返る、不明プリセット名で `ValueError`、`detector_preset` launch 引数の宣言 |
 
 ROS統合テスト:
 
@@ -595,6 +685,7 @@ ros2 param set /vehicle_detector_node voxel_leaf_size 0.25
 | FR-005 検知情報送信 | 6.3章 |
 | FR-012 検知結果の保存 (Phase 2) | 6.3章「検知結果保存」、12章 |
 | FR-013 HTTP payload schema のバージョン管理 (Phase 2) | 6.3章「Payload schema バージョン管理」、12章 |
+| FR-014 パラメータプリセット管理 (Phase 2) | 7.1章「プリセット設計」、12章 |
 | FR-006 可視化 | 5章、6.2章、7章 |
 | FR-007 GUIによるパラメータ調整 | 6.4章 |
 | FR-008 設定ファイル | 8章、`config/detector_params.yaml` |
