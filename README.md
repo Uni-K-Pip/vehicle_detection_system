@@ -35,7 +35,7 @@ vehicle_detection_system/
     include/vehicle_detection/
     src/
     launch/
-    config/                 # detector_params.yaml, dataset_params.yaml, transforms.yaml
+    config/                 # detector_params.yaml, dataset_params.yaml, transforms.yaml, presets/
     rviz/                   # vehicle_detection.rviz
     test/
   tools/
@@ -97,6 +97,30 @@ ros2 launch vehicle_detection vehicle_detection.launch.py \
 ```
 
 `pcd_directory` 配下の PCD は `pcd_glob` (既定 `*.pcd`) でフィルタし、ファイル名で sort された順に再生する。明示的なリストを使いたい場合は YAML から `pcd_files: ["a.pcd", "b.pcd"]` を渡す。`loop:=false` を指定するとリスト末尾で publish が停止 (ノードは生存)。`pcd_directory` も `pcd_files` も未指定の場合は MVP どおり単一 `pcd_file` のみを再生する。
+
+検知パラメータの代表的な組み合わせを `detector_preset` (Phase 2、FR-014) で切り替えられる:
+
+```bash
+# PandaSet PCD デモに合わせて検証済みの値を使う
+ros2 launch vehicle_detection vehicle_detection.launch.py \
+  detector_preset:=pandaset_balanced
+
+# 近距離 (約 20 m) に絞って軽量に確認
+ros2 launch vehicle_detection vehicle_detection.launch.py \
+  detector_preset:=near_range
+```
+
+`detector_preset` を省略、または `default` を指定したときは、`config/detector_params.yaml` の値がそのまま使われ、既存の挙動と一致する。プリセットは `src/vehicle_detection/config/presets/<name>.yaml` の読み取り専用 YAML として配置され、`vehicle_detector_node` の検知パラメータ (voxel / ROI / 地面除去 / clustering / 車両寸法フィルタ) のみを上書きする。HTTP 送信、検知結果保存、Web GUI、PCD 再生の挙動はプリセット切り替えで変わらない。
+
+提供しているプリセット:
+
+| 名前 | 用途 |
+| --- | --- |
+| `default` | 既存の `detector_params.yaml` をそのまま使う (no-op オーバーレイ) |
+| `pandaset_balanced` | 同梱 PandaSet PCD デモ用に検証済みの検知パラメータ |
+| `near_range` | 近距離 (約 20 m)・軽量な確認用に ROI と clustering を絞った設定 |
+
+不明なプリセット名 (例: `detector_preset:=does_not_exist`) を指定した場合は、launch が起動失敗し、エラーメッセージに利用可能なプリセット一覧が表示される。プリセットは `params_file` のオーバーレイとして適用されるため、`params_file:=<custom>.yaml` と組み合わせると custom の値の上にプリセットが乗る。
 
 `use_sender:=true` を指定すると `detection_sender_node` が追加され、`/vehicle_detections` への再パブリッシュおよび／または [`docs/payload_schema.md`](docs/payload_schema.md) に沿った JSON の POST を行う。`use_rviz:=true` で `src/vehicle_detection/rviz/vehicle_detection.rviz` を読み込んだ RViz が起動する。`use_gui:=true` (既定) は実行時パラメータ調整用の `parameter_bridge_node` を起動する。詳細は [ブラウザ GUI](#ブラウザ-gui) を参照。
 

@@ -292,6 +292,43 @@ payload は、外部受信側およびオフライン解析ツールが将来の
 - 将来の破壊的変更に備え、`docs/payload_schema.md` の version history
   セクションでバージョン履歴を記録すること。
 
+### FR-014 パラメータプリセット管理 (Phase 2)
+
+検知パラメータの代表的な組み合わせを「プリセット」として名前付きで管理し、
+launch 引数から切り替え可能にする。これにより、データセットや確認用途
+ごとに `detector_params.yaml` を毎回手書きで上書きせずに、一発で再現
+できる構成を切り替えられるようにする。
+
+- 本対応は launch / YAML ベースの読み取り専用プリセット管理とすること。
+  Web GUI 上でのプリセット保存・編集機能は対象外とすること。
+- launch 引数 `detector_preset` でプリセット名を指定できること。
+  - 初期値は `default` とすること。
+  - `default` を指定したとき、または `detector_preset` を省略したとき、
+    既存の `ros2 launch vehicle_detection vehicle_detection.launch.py` と
+    完全に同じ挙動になること。
+- 最低限、以下のプリセットを提供すること。
+  - `default`: 既存の `detector_params.yaml` 相当 (no-op overlay)。
+  - `pandaset_balanced`: 同梱の PandaSet PCD デモ向けに検証済みの
+    検知パラメータ (現在 `detector_params.yaml` に記載されている値の
+    明示的なスナップショット)。
+  - `near_range`: 近距離・軽量確認向けの ROI と clustering 設定。
+- プリセットファイルは `src/vehicle_detection/config/presets/<name>.yaml`
+  に配置すること。読み取り専用とし、ノード実行中は書き換えないこと。
+- プリセットで上書きする値は、`vehicle_detector_node` の検知パラメータ
+  (voxel / ROI / 地面除去 / clustering / 車両寸法フィルタ) に限定すること。
+  HTTP 送信、検知結果保存、Web GUI、PCD 再生関連のパラメータは、本仕組み
+  で上書きしないこと。
+- 不明なプリセット名を指定した場合は、launch を分かりやすいエラーで失敗
+  させること。エラーメッセージには指定された名前と利用可能なプリセット
+  一覧を含めること。
+- 既存の `params_file` launch 引数は引き続き受け付け、プリセットは
+  `params_file` の上に重ねるオーバーレイとして適用されること。
+  (load 順: `params_file` → `presets/<name>.yaml` → 個別の launch 引数
+  上書き)。
+- 各プリセットの意図は YAML コメントまたは README に短く記載すること。
+- プリセットの追加によって、既存の検知パラメータの初期値、HTTP payload、
+  JSONL 保存の挙動、PCD 再生の挙動を変更しないこと。
+
 ## 6. パラメータ要件
 
 | パラメータ | 説明 | 初期値案 |
@@ -343,6 +380,7 @@ payload は、外部受信側およびオフライン解析ツールが将来の
 | `save_results` | 検知結果のファイル保存を有効化 (Phase 2) | `false` |
 | `result_output_path` | 保存先ファイルパス (Phase 2) | `""` |
 | `result_output_format` | 保存形式: `jsonl` (Phase 2) | `jsonl` |
+| `detector_preset` | 検知パラメータプリセット名 (Phase 2) | `default` |
 | `gui_port` | Web GUIの待受ポート | `8081` |
 
 ## 7. 非機能要件
@@ -518,6 +556,10 @@ transforms:
 - `save_results=true` で開けない保存先パスを指定しても、`detection_sender_node` がクラッシュせず警告ログを出して動作を継続すること (Phase 2)。
 - HTTP POST payload と JSON Lines 1 行の双方が、ルートフィールド `schema_version` を含み、初期バージョンとして `"1.0"` を返すこと。検知 0 件のフレームでも `schema_version` が含まれること (Phase 2)。
 - 既存のルートフィールド (`timestamp`, `frame_id`, `detections`) と `detections[]` の各サブフィールドは、`schema_version` 追加後も削除・リネーム・意味変更されないこと (Phase 2)。
+- launch 引数 `detector_preset` を省略、または `default` を指定したとき、既存の `ros2 launch vehicle_detection vehicle_detection.launch.py` と挙動が変わらないこと (Phase 2)。
+- 既知のプリセット名 (`default`, `pandaset_balanced`, `near_range`) を `detector_preset` に指定したとき、launch がエラー無く解決できること (Phase 2)。
+- 不明なプリセット名を `detector_preset` に指定したとき、指定名と利用可能なプリセット一覧を含む分かりやすいエラーで launch が失敗すること (Phase 2)。
+- プリセット切り替えによって変更されるのは `vehicle_detector_node` の検知パラメータのみで、HTTP 送信、検知結果保存、Web GUI、PCD 再生の挙動は変わらないこと (Phase 2)。
 
 ## 11. テスト要件
 
@@ -537,6 +579,8 @@ transforms:
 - `loop=true` / `loop=false` でのリスト末尾挙動の単体テスト (Phase 2)
 - 検知結果保存ヘルパーの単体テスト: 無効化時の no-op、有効時の JSONL append、不正パス時の no-throw、未対応フォーマット拒否 (Phase 2)
 - HTTP/JSONL payload に `schema_version` フィールドが含まれることを確認する単体テスト。検知 1 件以上の payload と検知 0 件の payload の両方で確認すること。JSONL 保存テストでは保存された行に `schema_version` が含まれることを確認すること (Phase 2)
+- `detector_preset` launch 引数が宣言されていることの確認 (Phase 2)
+- 既知のプリセット名 (`default`, `pandaset_balanced`, `near_range`) が解決できることの確認、および不明なプリセット名で `ValueError` 相当のエラーになることの確認 (Phase 2)
 
 ## 12. 実装フェーズ案
 

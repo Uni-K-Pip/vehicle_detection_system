@@ -61,7 +61,11 @@
   `schema_version` が含まれることも確認する。
 - `test_launch_description` — `vehicle_detection.launch.py` が import
   でき、想定する launch 引数を宣言し、想定するノードを登録することを
-  確認する pytest スモークテスト
+  確認する pytest スモークテスト。Phase 2 (FR-014) として、
+  `detector_preset` launch 引数の宣言と既定値、3 種の同梱プリセット
+  ファイルの存在、`_resolve_preset_path` の既知名解決、不明名・
+  ディレクトリ欠損時の `ValueError`、`default.yaml` が空オーバーレイで
+  あることを確認する。
 
 ## 確認済みトピック
 

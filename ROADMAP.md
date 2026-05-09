@@ -94,9 +94,10 @@
 ## v1.1.0 - Phase 2 実用性改善 (進行中)
 
 要件定義書 12 章「Phase 2: 実用性改善」項目のうち、本リリースでは
-「複数PCD連続再生」、「検知結果の保存」、および「HTTP payload schema の
-バージョン管理」を対象とする。残りの項目 (rosbag 入力、簡易トラッキング、
-パラメータプリセット) は本リリースには含めず、後続リリースで取り扱う。
+「複数PCD連続再生」、「検知結果の保存」、「HTTP payload schema の
+バージョン管理」、および「パラメータプリセット管理」を対象とする。
+残りの項目 (rosbag 入力、簡易トラッキング) は本リリースには含めず、
+後続リリースで取り扱う。
 
 - [x] 複数PCD連続再生 (FR-011)
   - [x] `pcd_loader_node` に再生リスト機構を追加する
@@ -128,3 +129,16 @@
         出力されることをユニットテストで確認する
   - [x] 要件 (FR-013)、設計、`docs/payload_schema.md` の version
         history、CHANGELOG に追記する
+- [x] パラメータプリセット管理 (FR-014)
+  - [x] `config/presets/` 配下に読み取り専用プリセット YAML を追加
+        (`default`、`pandaset_balanced`、`near_range`)
+  - [x] launch 引数 `detector_preset` を追加し、未指定 / `default` で
+        既存挙動を維持する
+  - [x] 不明なプリセット名で利用可能な一覧を含むエラーで launch を
+        失敗させる
+  - [x] プリセットの上書き対象は `vehicle_detector_node` の検知
+        パラメータに限定し、HTTP 送信、検知結果保存、Web GUI、
+        PCD 再生は変えない
+  - [x] launch スモークテストに `detector_preset` 引数の宣言確認、
+        既知プリセットの解決確認、不明プリセットの拒否確認を追加
+  - [x] 要件・設計・README・CHANGELOG に追記する
