@@ -93,7 +93,9 @@ std::string serialize_detections(const DetectionJsonPayload & payload)
 {
   std::ostringstream os;
   os << "{";
-  os << "\"timestamp\":\""
+  os << "\"schema_version\":\""
+     << escape_json_string(kPayloadSchemaVersion) << "\"";
+  os << ",\"timestamp\":\""
      << format_iso8601_utc(payload.stamp_sec, payload.stamp_nanosec) << "\"";
   os << ",\"frame_id\":\"" << escape_json_string(payload.frame_id) << "\"";
   os << ",\"detections\":[";

@@ -297,6 +297,7 @@ HTTP payload:
 
 ```json
 {
+  "schema_version": "1.0",
   "timestamp": "2026-04-30T00:00:00.000Z",
   "frame_id": "map",
   "detections": [
@@ -311,6 +312,22 @@ HTTP payload:
   ]
 }
 ```
+
+Payload schema バージョン管理 (Phase 2, FR-013):
+
+- `serialize_detections()` は出力 JSON のルートに `schema_version` を
+  追加する。値は `detection_json` 実装側で `kPayloadSchemaVersion`
+  (現在 `"1.0"`) として一元管理し、ROS パラメータ・launch 引数・設定
+  ファイルからは変更できない。
+- HTTP POST と JSONL 保存はいずれも同じ `serialize_detections()` を
+  経由するため、両経路の payload は `schema_version` を含めて完全一致
+  する。
+- 検知 0 件の payload でも `schema_version` は出力する。
+- 既存フィールド (`timestamp`, `frame_id`, `detections` および
+  `detections[]` 内の `id`, `class`, `confidence`, `center`, `size`,
+  `yaw`) は本対応では削除・リネーム・意味変更しない。
+- 将来の破壊的変更時は `docs/payload_schema.md` の version history に
+  新しい `schema_version` 値、変更点、上位互換性の有無を追記する。
 
 HTTP処理:
 
@@ -524,7 +541,7 @@ PandaSet公式サイトは、PandaSetを自動運転向けopen-source datasetと
 | `point_cloud_processing` | ROI切り出し、空点群、少数点群 |
 | bbox算出 | center、length、width、height |
 | 車両判定 | 境界値、範囲外除外 |
-| HTTP JSON変換 | 必須フィールド、空検知配列 |
+| HTTP JSON変換 | 必須フィールド、空検知配列、`schema_version` の有無と値 (Phase 2, FR-013) |
 | 再生リスト解決 (Phase 2) | `pcd_files`優先、`pcd_directory`展開、未指定時の単一PCDフォールバック、欠落ファイル拒否、`loop`末尾挙動 |
 | 検知結果保存 (Phase 2) | 無効時 no-op、JSONL 1 行 append、複数 append の順序保持、不正パス時 no-throw、未対応フォーマット拒否 |
 
@@ -577,6 +594,7 @@ ros2 param set /vehicle_detector_node voxel_leaf_size 0.25
 | FR-004 普通車候補検知 | 6.2章 |
 | FR-005 検知情報送信 | 6.3章 |
 | FR-012 検知結果の保存 (Phase 2) | 6.3章「検知結果保存」、12章 |
+| FR-013 HTTP payload schema のバージョン管理 (Phase 2) | 6.3章「Payload schema バージョン管理」、12章 |
 | FR-006 可視化 | 5章、6.2章、7章 |
 | FR-007 GUIによるパラメータ調整 | 6.4章 |
 | FR-008 設定ファイル | 8章、`config/detector_params.yaml` |

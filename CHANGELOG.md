@@ -4,13 +4,30 @@
 
 ## [Unreleased]
 
-Phase 2 実用性改善のうち「複数PCD連続再生」(FR-011) と「検知結果の保存」
-(FR-012) を対象とする。残りの Phase 2 項目 (rosbag 入力、簡易
-トラッキング、パラメータプリセット、HTTP payload schema バージョン管理)
-は本範囲外。
+Phase 2 実用性改善のうち「複数PCD連続再生」(FR-011)、「検知結果の保存」
+(FR-012)、および「HTTP payload schema のバージョン管理」(FR-013) を
+対象とする。残りの Phase 2 項目 (rosbag 入力、簡易トラッキング、
+パラメータプリセット) は本範囲外。
 
 ### Added
 
+- HTTP POST payload と JSON Lines 保存 payload のルートに
+  `schema_version` (string) フィールドを追加 (FR-013)。初期値は
+  `"1.0"`。値は `detection_json` 実装側の定数
+  (`kPayloadSchemaVersion`) として一元管理しており、ROS パラメータ・
+  launch 引数・設定ファイルからは変更できない。HTTP 送信と JSONL 保存は
+  同じ `serialize_detections()` を共有するため、両経路の payload は
+  `schema_version` を含めて完全に一致する。検知 0 件のフレームでも
+  `schema_version` は出力される。既存フィールド (`timestamp`、
+  `frame_id`、`detections` および `detections[]` のサブフィールド) は
+  削除・リネーム・意味変更していない。
+- `docs/payload_schema.md` に schema version の運用ポリシーと
+  version history セクションを追加。初版 `1.0` を記録。
+- `test_detection_json` に `schema_version` フィールドの存在および
+  値 (`"1.0"`) を確認する単体テストを追加。検知 0 件 / 1 件 / エスケープ
+  必要な frame_id の各 payload で確認する。
+- `test_detection_result_writer` に、JSONL 保存された行へ
+  `schema_version` が含まれることを確認する単体テストを追加。
 - `pcd_loader_node` に再生リスト機能を追加。新規パラメータ `pcd_files`
   (string[]) で明示リストを、`pcd_directory` (string) と `pcd_glob`
   (string、初期値 `*.pcd`) でディレクトリ展開を、`loop` (bool、初期値
@@ -55,6 +72,11 @@ Phase 2 実用性改善のうち「複数PCD連続再生」(FR-011) と「検知
 
 ### Changed
 
+- `serialize_detections()` のルート JSON 出力に `schema_version` を
+  先頭フィールドとして追加した (FR-013)。既存フィールドの順序・名前・
+  意味は変えていないため、既存受信側は無視するだけで動作する
+  (フォワード互換)。`docs/payload_schema.md` の version history に
+  初版 `1.0` を記録した。
 - `pcd_loader_node` は `pcl::io::loadPCDFile` を起動時の 1 回呼び出し
   ではなく、各 publish ティック直前の lazy-load + 1 スロットキャッシュ
   に変更。同じインデックスを連続 publish するときは再ロードしない。

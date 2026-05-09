@@ -40,21 +40,25 @@
 
 `colcon test --merge-install --packages-select vehicle_detection` の
 最新フル実行 (Jazzy + Docker) の結果は
-**198 tests, 0 errors, 0 failures, 24 skipped**。実行されるテスト:
+**201 tests, 0 errors, 0 failures, 24 skipped**。実行されるテスト:
 
 - `test_parameter_validation` — パラメータ検証ヘルパーに対する GTest
   単体テスト
 - `test_point_cloud_processing` — PCL パイプラインヘルパー (bbox 寸法、
   車両フィルタ、AABB、CropBox、クラスタリング) に対する GTest 単体テスト
 - `test_detection_json` — `Detection3DArray` の JSON シリアライズと
-  HTTP URL パースに対する GTest 単体テスト
+  HTTP URL パースに対する GTest 単体テスト。Phase 2 (FR-013) の
+  `schema_version` フィールド検証 (定数値、先頭フィールド配置、
+  検知 0/1 件の双方で出力されること) を含む。
 - `test_parameter_json` — `rclcpp::Parameter` と JSON の往復変換および
   ブラウザ GUI が拒否すべき不正値に対する GTest 単体テスト
 - `test_pcd_playlist` — Phase 2 複数PCD再生リスト解決 (FR-011) に対する
   GTest 単体テスト
 - `test_detection_result_writer` — Phase 2 検知結果保存ヘルパー (FR-012)
   に対する GTest 単体テスト (フォーマット名解析、無効化時 no-op、JSONL
-  追記、不正パスのクラッシュなし、reconfigure 時のファイル close)
+  追記、不正パスのクラッシュなし、reconfigure 時のファイル close)。
+  Phase 2 (FR-013) として、保存された JSONL 行に HTTP payload と同じ
+  `schema_version` が含まれることも確認する。
 - `test_launch_description` — `vehicle_detection.launch.py` が import
   でき、想定する launch 引数を宣言し、想定するノードを登録することを
   確認する pytest スモークテスト

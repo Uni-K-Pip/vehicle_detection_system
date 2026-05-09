@@ -245,6 +245,10 @@ TEST(DetectionResultWriter, EnabledAppendsOneJsonlLinePerPayload)
   EXPECT_NE(lines[0].find("\"id\":\"1\""), std::string::npos);
   EXPECT_NE(lines[1].find("\"id\":\"2\""), std::string::npos);
   EXPECT_NE(lines[0].find("\"frame_id\":\"map\""), std::string::npos);
+  // FR-013: every saved JSONL line carries the same schema_version as
+  // the HTTP payload.
+  EXPECT_NE(lines[0].find("\"schema_version\":\"1.0\""), std::string::npos);
+  EXPECT_NE(lines[1].find("\"schema_version\":\"1.0\""), std::string::npos);
 }
 
 TEST(DetectionResultWriter, AppendsArePreservedAcrossReconfigure)
@@ -319,4 +323,6 @@ TEST(DetectionResultWriter, EmptyPayloadProducesValidLine)
   ASSERT_EQ(lines.size(), 1u);
   EXPECT_NE(lines[0].find("\"detections\":[]"), std::string::npos);
   EXPECT_NE(lines[0].find("\"frame_id\":\"map\""), std::string::npos);
+  // FR-013: empty-detections frames must still carry schema_version.
+  EXPECT_NE(lines[0].find("\"schema_version\":\"1.0\""), std::string::npos);
 }

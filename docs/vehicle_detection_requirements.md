@@ -270,6 +270,28 @@ src/
 - `result_output_format` に `jsonl` 以外を指定した場合は、起動時およびパラメータ
   変更時に拒否すること。
 
+### FR-013 HTTP payload schema のバージョン管理 (Phase 2)
+
+`detection_sender_node` が出力する HTTP POST payload と JSON Lines 保存
+payload は、外部受信側およびオフライン解析ツールが将来の互換性破壊を検知
+できるよう、ペイロードのスキーマバージョンを明示する。
+
+- HTTP POST payload と JSON Lines 1 行のいずれにも、ルートフィールド
+  `schema_version` (string) を含めること。
+- 初期バージョンは `"1.0"` とし、`detection_sender_node` の HTTP 送信と
+  JSONL 保存のどちらの経路でも常に同じ値が出力されること。
+- `schema_version` は ROS 2 パラメータ・launch 引数・設定ファイルからは
+  変更できないこと。実装側の定数として管理すること。
+- 既存のルートフィールド (`timestamp`, `frame_id`, `detections`)
+  および `detections[]` の各サブフィールド (`id`, `class`, `confidence`,
+  `center`, `size`, `yaw`) は、削除・リネーム・意味変更しないこと。
+- 検知 0 件のフレームでも `schema_version` が含まれること。
+- HTTP POST と JSON Lines は `serialize_detections` を共有しているため、
+  同一フレームの payload は両経路で完全一致すること
+  (`schema_version` の値とフィールド位置を含む)。
+- 将来の破壊的変更に備え、`docs/payload_schema.md` の version history
+  セクションでバージョン履歴を記録すること。
+
 ## 6. パラメータ要件
 
 | パラメータ | 説明 | 初期値案 |
@@ -452,6 +474,7 @@ transforms:
 
 ```json
 {
+  "schema_version": "1.0",
   "timestamp": "2026-04-30T00:00:00.000Z",
   "frame_id": "map",
   "detections": [
@@ -493,6 +516,8 @@ transforms:
 - `save_results=true`、`result_output_path` 指定時に、各検知フレームが JSON Lines ファイルへ 1 行ずつ追記されること (Phase 2)。
 - `save_results=false` の場合、保存先ファイルへの書き込みが行われず既存挙動が変わらないこと (Phase 2)。
 - `save_results=true` で開けない保存先パスを指定しても、`detection_sender_node` がクラッシュせず警告ログを出して動作を継続すること (Phase 2)。
+- HTTP POST payload と JSON Lines 1 行の双方が、ルートフィールド `schema_version` を含み、初期バージョンとして `"1.0"` を返すこと。検知 0 件のフレームでも `schema_version` が含まれること (Phase 2)。
+- 既存のルートフィールド (`timestamp`, `frame_id`, `detections`) と `detections[]` の各サブフィールドは、`schema_version` 追加後も削除・リネーム・意味変更されないこと (Phase 2)。
 
 ## 11. テスト要件
 
@@ -511,6 +536,7 @@ transforms:
 - 再生リスト解決 (`pcd_files` 優先、`pcd_directory` 展開、未指定時の単一PCDフォールバック) の単体テスト (Phase 2)
 - `loop=true` / `loop=false` でのリスト末尾挙動の単体テスト (Phase 2)
 - 検知結果保存ヘルパーの単体テスト: 無効化時の no-op、有効時の JSONL append、不正パス時の no-throw、未対応フォーマット拒否 (Phase 2)
+- HTTP/JSONL payload に `schema_version` フィールドが含まれることを確認する単体テスト。検知 1 件以上の payload と検知 0 件の payload の両方で確認すること。JSONL 保存テストでは保存された行に `schema_version` が含まれることを確認すること (Phase 2)
 
 ## 12. 実装フェーズ案
 
