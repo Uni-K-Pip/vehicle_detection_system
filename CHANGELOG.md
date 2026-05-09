@@ -122,6 +122,20 @@ Phase 2 実用性改善のうち「複数PCD連続再生」(FR-011)、「検知�
   する一方で、保存先パスのオープン失敗は警告ログのみで吸収し、
   ROS / HTTP 送信側の挙動は維持する。
 
+### Fixed
+
+- `config/detector_params.yaml` の `pcd_loader_node` セクションから
+  `pcd_files: []` の行を削除した (FR-011 関連)。ROS 2 jazzy では
+  YAML の空配列 (`[]`) は要素型が決まらないため、`--params-file` 経由で
+  ロードした `pcd_files` パラメータの override が型 `NOT_SET` 扱いとなり、
+  `pcd_loader_node` が `declare_parameter<std::vector<std::string>>` の
+  段階で `No parameter value set` を投げて起動直後にクラッシュしていた。
+  C++ 側の declare は `std::vector<std::string>{}` をデフォルトとして
+  持つため、YAML から行を消すだけで FR-011 の「`pcd_files` 未指定時は
+  `pcd_directory` または `pcd_file` にフォールバック」挙動はそのまま
+  維持される。明示リストを使う場合は別 YAML / `ros2 param set` から
+  非空のリストとして渡す。
+
 ## v1.0.0 - 2026-05-02
 
 初版リリース (MVP)。`osrf/ros:jazzy-desktop` 上で PCD 点群から

@@ -8,8 +8,14 @@ pcd_loader_node:
     #   1. pcd_files (if non-empty) -- explicit ordered list.
     #   2. pcd_directory (if non-empty) -- sorted glob via pcd_glob.
     #   3. pcd_file (fallback to MVP single-file behaviour).
-    # Empty defaults preserve the MVP single-PCD behaviour.
-    pcd_files: []
+    # pcd_files is intentionally not declared here: ROS 2 jazzy rejects
+    # an empty YAML list ("pcd_files: []") because the override has no
+    # inferable element type, which makes pcd_loader_node abort with
+    # "No parameter value set". The C++ node declares the parameter with
+    # an empty std::vector<std::string> default, so omitting the key
+    # preserves the MVP single-PCD fallback. Override from a separate
+    # YAML or "ros2 param set" with a non-empty list, e.g.
+    #   pcd_files: ["/abs/a.pcd", "/abs/b.pcd"]
     pcd_directory: ""
     pcd_glob: "*.pcd"
     # When the playlist reaches its end, loop=true restarts at index 0,
