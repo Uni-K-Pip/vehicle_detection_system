@@ -48,6 +48,43 @@ def _resolve_pcd_file(context, *args, **kwargs):
     return []
 
 
+def _resolve_preset_path(preset_name, presets_dir):
+    """
+    Map a preset name to an absolute YAML path under presets_dir.
+
+    Pure helper for FR-014 detector_preset resolution: kept free of
+    launch context so the unit test suite can drive it directly.
+    Raises ValueError with the requested name and the list of available
+    preset stems when the YAML file is missing.
+    """
+    presets_dir = Path(presets_dir)
+    preset_path = presets_dir / f'{preset_name}.yaml'
+    if preset_path.is_file():
+        return str(preset_path)
+    if presets_dir.is_dir():
+        available = sorted(p.stem for p in presets_dir.glob('*.yaml'))
+    else:
+        available = []
+    available_msg = ', '.join(available) if available else '<no presets installed>'
+    raise ValueError(
+        f'Unknown detector_preset {preset_name!r}. '
+        f'Available presets: {available_msg}. '
+        f'Looked for {preset_path}.'
+    )
+
+
+def _resolve_detector_preset(context, *args, **kwargs):
+    preset_name = LaunchConfiguration('detector_preset').perform(context)
+    pkg_share = get_package_share_directory('vehicle_detection')
+    presets_dir = Path(pkg_share) / 'config' / 'presets'
+    try:
+        preset_file = _resolve_preset_path(preset_name, presets_dir)
+    except ValueError as exc:
+        raise RuntimeError(str(exc)) from exc
+    context.launch_configurations['detector_preset_file'] = preset_file
+    return []
+
+
 def generate_launch_description():
     pkg_share = get_package_share_directory('vehicle_detection')
     default_params = str(Path(pkg_share) / 'config' / 'detector_params.yaml')
@@ -137,6 +174,17 @@ def generate_launch_description():
             'Docker container to the host.'
         ),
     )
+    detector_preset_arg = DeclareLaunchArgument(
+        'detector_preset',
+        default_value='default',
+        description=(
+            'Phase 2 (FR-014): name of a detection-parameter preset under '
+            'config/presets/<name>.yaml. Applied as an overlay on top of '
+            'params_file for vehicle_detector_node only. detector_preset:= '
+            'default is a no-op overlay and keeps the existing behaviour. '
+            'Unknown names fail launch with the available preset list.'
+        ),
+    )
 
     pcd_file = LaunchConfiguration('pcd_file')
     pcd_directory = LaunchConfiguration('pcd_directory')
@@ -152,6 +200,7 @@ def generate_launch_description():
     rviz_config = LaunchConfiguration('rviz_config')
     use_gui = LaunchConfiguration('use_gui')
     gui_host = LaunchConfiguration('gui_host')
+    detector_preset_file = LaunchConfiguration('detector_preset_file')
 
     pcd_loader = Node(
         package='vehicle_detection',
@@ -177,7 +226,13 @@ def generate_launch_description():
         name='vehicle_detector_node',
         output='screen',
         parameters=[
+            # FR-014: ROS 2 launch merges YAML / dict entries left-to-right
+            # ("last wins"), so the override order is
+            #   detector_params.yaml -> presets/<name>.yaml -> launch dict.
+            # detector_preset:=default points at a no-op overlay so this
+            # keeps the existing behaviour when no preset is selected.
             params_file,
+            detector_preset_file,
             {
                 'target_frame_id': target_frame_id,
             },
@@ -245,7 +300,9 @@ def generate_launch_description():
         rviz_config_arg,
         use_gui_arg,
         gui_host_arg,
+        detector_preset_arg,
         OpaqueFunction(function=_resolve_pcd_file),
+        OpaqueFunction(function=_resolve_detector_preset),
         static_tf,
         pcd_loader,
         vehicle_detector,

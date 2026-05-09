@@ -1,0 +1,14 @@
+# default preset (FR-014)
+#
+# Intentionally a no-op overlay: every detection parameter inherits the
+# value from src/vehicle_detection/config/detector_params.yaml unchanged.
+# This guarantees that
+#   ros2 launch vehicle_detection vehicle_detection.launch.py
+# (no detector_preset argument, or detector_preset:=default) keeps the
+# existing MVP / Phase 2 behaviour without drifting from the base YAML.
+#
+# To "freeze" the current detector_params.yaml values into a stable
+# preset, snapshot them into pandaset_balanced.yaml instead of editing
+# this file.
+vehicle_detector_node:
+  ros__parameters: {}
