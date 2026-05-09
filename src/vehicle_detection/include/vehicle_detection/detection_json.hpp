@@ -28,6 +28,13 @@
 namespace vehicle_detection
 {
 
+// Payload schema version (FR-013). MAJOR.MINOR string. Bumped when the
+// JSON shape changes; receivers compare against their supported version.
+// MAJOR for breaking changes (rename / remove / type change), MINOR for
+// additive changes. Not a ROS parameter — defined here so HTTP and JSONL
+// stay in lockstep.
+constexpr char kPayloadSchemaVersion[] = "1.0";
+
 struct DetectionJsonItem
 {
   std::string id;

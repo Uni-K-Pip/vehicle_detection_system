@@ -29,6 +29,7 @@ using vehicle_detection::DetectionJsonItem;
 using vehicle_detection::DetectionJsonPayload;
 using vehicle_detection::HttpUrl;
 using vehicle_detection::format_iso8601_utc;
+using vehicle_detection::kPayloadSchemaVersion;
 using vehicle_detection::parse_http_url;
 using vehicle_detection::serialize_detections;
 
@@ -53,6 +54,51 @@ TEST(DetectionJson, EmptyPayload)
   EXPECT_NE(s.find("\"frame_id\":\"map\""), std::string::npos);
   EXPECT_NE(s.find("\"detections\":[]"), std::string::npos);
   EXPECT_NE(s.find("\"timestamp\""), std::string::npos);
+  // FR-013: schema_version must be present even for empty detections.
+  EXPECT_NE(s.find("\"schema_version\":\"1.0\""), std::string::npos);
+}
+
+TEST(DetectionJson, SchemaVersionConstantIsOnePointZero)
+{
+  // The constant is the contract receivers depend on. If this changes,
+  // docs/payload_schema.md version history must be updated too.
+  EXPECT_STREQ(kPayloadSchemaVersion, "1.0");
+}
+
+TEST(DetectionJson, SchemaVersionAppearsAsFirstField)
+{
+  DetectionJsonPayload payload{};
+  payload.frame_id = "map";
+  const std::string s = serialize_detections(payload);
+  // Anchor the check to the leading '{' so the field is first and
+  // formatted exactly as documented.
+  EXPECT_EQ(s.rfind("{\"schema_version\":\"1.0\"", 0), 0u) << s;
+}
+
+TEST(DetectionJson, SchemaVersionPresentWithDetections)
+{
+  DetectionJsonPayload payload{};
+  payload.frame_id = "map";
+  DetectionJsonItem item;
+  item.id = "1";
+  item.class_label = "car";
+  item.confidence = 0.8;
+  item.center_x = 1.0;
+  item.center_y = 2.0;
+  item.center_z = 0.0;
+  item.length = 4.5;
+  item.width = 1.8;
+  item.height = 1.6;
+  item.yaw = 0.0;
+  payload.detections.push_back(item);
+
+  const std::string s = serialize_detections(payload);
+  EXPECT_NE(s.find("\"schema_version\":\"1.0\""), std::string::npos);
+  // Existing fields are unchanged in name and meaning.
+  EXPECT_NE(s.find("\"timestamp\""), std::string::npos);
+  EXPECT_NE(s.find("\"frame_id\":\"map\""), std::string::npos);
+  EXPECT_NE(s.find("\"detections\":["), std::string::npos);
+  EXPECT_NE(s.find("\"id\":\"1\""), std::string::npos);
 }
 
 TEST(DetectionJson, SingleDetection)
