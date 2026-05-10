@@ -329,6 +329,56 @@ launch 引数から切り替え可能にする。これにより、データセ�
 - プリセットの追加によって、既存の検知パラメータの初期値、HTTP payload、
   JSONL 保存の挙動、PCD 再生の挙動を変更しないこと。
 
+### FR-015 rosbag入力対応 (Phase 2)
+
+MVP の単一PCD再生および FR-011 の複数PCD連続再生に加えて、rosbag を
+入力源として使用できるようにする。実機 LiDAR が到着する前段の動作確認、
+記録済み走行データのリプレイ、外部リポジトリで配布される rosbag の
+評価を、launch 側のスイッチ 1 つで切り替えられるようにすることが目的。
+
+- 本対応は launch レベルの rosbag 再生対応とすること。実機 LiDAR 入力、
+  rosbag 録画、rosbag フィルタリング、rosbag 内容の編集は対象外とする。
+- launch 引数 `input_mode` で入力源を切り替えられること。
+  - 取り得る値は `pcd` と `rosbag` のみとすること。
+  - 初期値は `pcd` とすること。
+  - `pcd` を指定したとき、または `input_mode` を省略したときは、
+    既存挙動 (MVP の単一PCD再生 / FR-011 の複数PCD連続再生 / FR-012
+    の検知結果保存 / FR-013 の `schema_version` / FR-014 のプリセット
+    管理) を一切変更しないこと。
+  - 上記以外の値が指定された場合は、launch を分かりやすいエラーで失敗
+    させること。エラーには指定値と取り得る値の一覧を含めること。
+- `input_mode:=rosbag` を指定したとき:
+  - `pcd_loader_node` を起動しないこと (二重 publish を避けるため)。
+  - 指定された rosbag を `ros2 bag play` 経由で再生し、点群を
+    `/input/points` に流せるようにすること。
+  - rosbag 内の点群トピック名が `/input/points` と異なる場合は、
+    `--remap` で吸収できるようにすること。
+  - 再生中も `vehicle_detector_node`、`detection_sender_node`、
+    `parameter_bridge_node`、static transform、RViz は通常通り動作する
+    こと。
+- launch 引数 `rosbag_path` で rosbag のパス (rosbag2 形式のディレクトリ、
+  または単一ファイル形式の bag) を指定できること。
+  - `input_mode:=rosbag` で `rosbag_path` が未指定または空文字の場合は、
+    分かりやすいエラーメッセージで launch を失敗させること。
+  - 指定したパスが存在しない場合も、原因を含む分かりやすいエラーで
+    launch を失敗させること。
+  - `input_mode:=pcd` のときは `rosbag_path` の値を検証しないこと
+    (既存利用者が誤って起動を止めない)。
+- launch 引数 `rosbag_topic` で rosbag 内の点群トピック名を指定できる
+  こと。非空のときは `ros2 bag play --remap <rosbag_topic>:=/input/points`
+  として remap を適用し、`vehicle_detector_node` 側のサブスクライバを
+  変更せずに済むようにすること。空文字 (既定値) のときは remap せず、
+  bag 内のトピックがそのまま流れること。
+- launch 引数 `rosbag_loop` (bool、初期値 `false`) で `ros2 bag play --loop`
+  を切り替えられること。
+- launch 引数 `rosbag_rate` (float 文字列、初期値 `1.0`) で
+  `ros2 bag play --rate <rate>` を切り替えられること。
+- rosbag 実データはリポジトリにコミットしないこと (PCD と同じ運用)。
+  ライセンス / 取得元 / 配置先は利用者が個別に管理すること。
+- 既存の検知パラメータ、HTTP 送信、検知結果保存 (FR-012)、`schema_version`
+  (FR-013)、プリセット管理 (FR-014) の挙動は、`input_mode` の切り替えで
+  変えないこと。
+
 ## 6. パラメータ要件
 
 | パラメータ | 説明 | 初期値案 |
@@ -381,6 +431,11 @@ launch 引数から切り替え可能にする。これにより、データセ�
 | `result_output_path` | 保存先ファイルパス (Phase 2) | `""` |
 | `result_output_format` | 保存形式: `jsonl` (Phase 2) | `jsonl` |
 | `detector_preset` | 検知パラメータプリセット名 (Phase 2) | `default` |
+| `input_mode` | 入力源: `pcd`, `rosbag` (Phase 2) | `pcd` |
+| `rosbag_path` | rosbagパス (Phase 2、`input_mode=rosbag`時に必須) | `""` |
+| `rosbag_topic` | rosbag内点群トピック名 (Phase 2、空時は remap なし) | `""` |
+| `rosbag_loop` | `ros2 bag play --loop` の有効化 (Phase 2) | `false` |
+| `rosbag_rate` | `ros2 bag play --rate` の値 (Phase 2) | `1.0` |
 | `gui_port` | Web GUIの待受ポート | `8081` |
 
 ## 7. 非機能要件
@@ -560,6 +615,9 @@ transforms:
 - 既知のプリセット名 (`default`, `pandaset_balanced`, `near_range`) を `detector_preset` に指定したとき、launch がエラー無く解決できること (Phase 2)。
 - 不明なプリセット名を `detector_preset` に指定したとき、指定名と利用可能なプリセット一覧を含む分かりやすいエラーで launch が失敗すること (Phase 2)。
 - プリセット切り替えによって変更されるのは `vehicle_detector_node` の検知パラメータのみで、HTTP 送信、検知結果保存、Web GUI、PCD 再生の挙動は変わらないこと (Phase 2)。
+- launch 引数 `input_mode` を省略、または `pcd` を指定したとき、既存の `ros2 launch vehicle_detection vehicle_detection.launch.py` と挙動が変わらないこと (Phase 2、FR-015)。
+- `input_mode:=rosbag` 指定時に `rosbag_path` を省略した場合、または `rosbag_path` が存在しないパスを指している場合に、原因を含む分かりやすいエラーで launch が失敗すること (Phase 2、FR-015)。
+- `input_mode:=rosbag` 指定時に `pcd_loader_node` が起動しないこと、`rosbag_topic` を非空で指定したときに `ros2 bag play --remap <rosbag_topic>:=/input/points` の形でリマップされること (Phase 2、FR-015)。
 
 ## 11. テスト要件
 
@@ -581,6 +639,10 @@ transforms:
 - HTTP/JSONL payload に `schema_version` フィールドが含まれることを確認する単体テスト。検知 1 件以上の payload と検知 0 件の payload の両方で確認すること。JSONL 保存テストでは保存された行に `schema_version` が含まれることを確認すること (Phase 2)
 - `detector_preset` launch 引数が宣言されていることの確認 (Phase 2)
 - 既知のプリセット名 (`default`, `pandaset_balanced`, `near_range`) が解決できることの確認、および不明なプリセット名で `ValueError` 相当のエラーになることの確認 (Phase 2)
+- `input_mode` / `rosbag_path` / `rosbag_topic` / `rosbag_loop` / `rosbag_rate` の launch 引数が宣言されており、`input_mode` の既定値が `pcd` であることを確認する単体テスト (Phase 2、FR-015)
+- `input_mode:=pcd` 時の既存挙動が変わらないこと (`pcd_loader_node` が起動条件付きで残ること) を確認する launch スモークテスト (Phase 2、FR-015)
+- `input_mode:=rosbag` で `rosbag_path` が空または存在しないパスのとき、`ValueError` 相当で launch が失敗することを確認する単体テスト (Phase 2、FR-015)
+- `ros2 bag play` コマンド組み立てヘルパーの単体テスト: `--rate`、`--loop`、`--remap <rosbag_topic>:=/input/points` の有無 (Phase 2、FR-015)
 
 ## 12. 実装フェーズ案
 

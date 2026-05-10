@@ -95,9 +95,9 @@
 
 要件定義書 12 章「Phase 2: 実用性改善」項目のうち、本リリースでは
 「複数PCD連続再生」、「検知結果の保存」、「HTTP payload schema の
-バージョン管理」、および「パラメータプリセット管理」を対象とする。
-残りの項目 (rosbag 入力、簡易トラッキング) は本リリースには含めず、
-後続リリースで取り扱う。
+バージョン管理」、「パラメータプリセット管理」、および「rosbag
+入力対応」を対象とする。残りの項目 (簡易トラッキング) は本リリース
+には含めず、後続リリースで取り扱う。
 
 - [x] 複数PCD連続再生 (FR-011)
   - [x] `pcd_loader_node` に再生リスト機構を追加する
@@ -141,4 +141,20 @@
         PCD 再生は変えない
   - [x] launch スモークテストに `detector_preset` 引数の宣言確認、
         既知プリセットの解決確認、不明プリセットの拒否確認を追加
+  - [x] 要件・設計・README・CHANGELOG に追記する
+- [x] rosbag入力対応 (FR-015)
+  - [x] launch 引数 `input_mode` (`pcd` / `rosbag`) を追加し、
+        既定値 `pcd` で既存挙動を維持する
+  - [x] `input_mode:=rosbag` のとき `pcd_loader_node` をスキップし、
+        `ros2 bag play <rosbag_path>` を `ExecuteProcess` で起動する
+  - [x] `rosbag_path` 未指定や存在しないパスのときに launch を分かり
+        やすいエラーで失敗させる
+  - [x] `rosbag_topic` で `--remap <rosbag_topic>:=/input/points` を
+        指定できるようにする
+  - [x] `rosbag_loop` (`--loop`)、`rosbag_rate` (`--rate`) を切り
+        替えられるようにする
+  - [x] launch スモークテストに `input_mode` / `rosbag_*` 引数の宣言
+        確認、`_validate_input_mode_inputs` の正常／異常系、
+        `_build_rosbag_play_command` の組み立て確認、`pcd_loader_node`
+        の launch condition 確認を追加
   - [x] 要件・設計・README・CHANGELOG に追記する

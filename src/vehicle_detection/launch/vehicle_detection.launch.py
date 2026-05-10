@@ -25,14 +25,19 @@ Starts pcd_loader_node, vehicle_detector_node, the static transform from
 target_frame_id to input_frame_id, the optional detection_sender_node,
 the optional parameter_bridge_node Web GUI, and an optional RViz instance
 with the bundled detector configuration.
+
+FR-015 Phase 2 input switching: ``input_mode:=rosbag`` skips
+pcd_loader_node and instead runs ``ros2 bag play`` against
+``rosbag_path``, optionally remapping the bag's point cloud topic onto
+``/input/points`` so the detector pipeline stays unchanged.
 """
 
 from pathlib import Path
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, OpaqueFunction
-from launch.conditions import IfCondition
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, OpaqueFunction
+from launch.conditions import IfCondition, LaunchConfigurationEquals
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
@@ -83,6 +88,105 @@ def _resolve_detector_preset(context, *args, **kwargs):
         raise RuntimeError(str(exc)) from exc
     context.launch_configurations['detector_preset_file'] = preset_file
     return []
+
+
+# FR-015 Phase 2: rosbag input support --------------------------------------
+
+_VALID_INPUT_MODES = ('pcd', 'rosbag')
+
+
+def _coerce_bool(value):
+    """Accept the launch-arg conventions for boolean strings."""
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in ('true', '1', 'yes', 'on')
+
+
+def _validate_input_mode_inputs(input_mode, rosbag_path):
+    """
+    Validate the input_mode / rosbag_path combination.
+
+    Pure helper for FR-015: raises ValueError with a user-facing message so
+    launch fails clearly. Kept free of LaunchContext so the unit test suite
+    can drive it directly.
+    """
+    if input_mode not in _VALID_INPUT_MODES:
+        raise ValueError(
+            f'Unknown input_mode {input_mode!r}. '
+            f'Valid values: {", ".join(_VALID_INPUT_MODES)}.'
+        )
+    if input_mode == 'rosbag':
+        if not rosbag_path:
+            raise ValueError(
+                'input_mode:=rosbag requires rosbag_path to be set. '
+                'Pass rosbag_path:=/path/to/bag (file or directory) as a '
+                'launch argument.'
+            )
+        if not Path(rosbag_path).exists():
+            raise ValueError(
+                f'rosbag_path does not exist: {rosbag_path}. '
+                f'Provide an existing rosbag file or directory.'
+            )
+
+
+def _build_rosbag_play_command(
+    rosbag_path,
+    rosbag_topic,
+    rosbag_loop,
+    rosbag_rate,
+    input_points_topic='/input/points',
+):
+    """
+    Build the ``ros2 bag play`` command list for FR-015.
+
+    Pure helper kept free of LaunchContext for unit testing.
+    A non-empty rosbag_topic triggers a remap onto input_points_topic so
+    the rest of the detection pipeline can stay unchanged. rosbag_loop
+    accepts either bool or the launch-arg string conventions.
+    """
+    cmd = ['ros2', 'bag', 'play', str(rosbag_path), '--rate', str(rosbag_rate)]
+    if _coerce_bool(rosbag_loop):
+        cmd.append('--loop')
+    if rosbag_topic:
+        cmd.extend(['--remap', f'{rosbag_topic}:={input_points_topic}'])
+    return cmd
+
+
+def _validate_input_mode(context, *args, **kwargs):
+    input_mode = LaunchConfiguration('input_mode').perform(context)
+    rosbag_path = LaunchConfiguration('rosbag_path').perform(context)
+    if rosbag_path and not Path(rosbag_path).is_absolute():
+        # Mirror the pcd_file behaviour so users can pass
+        # rosbag_path:=data/bags/sample from the workspace root.
+        rosbag_path = str(Path.cwd() / rosbag_path)
+    try:
+        _validate_input_mode_inputs(input_mode, rosbag_path)
+    except ValueError as exc:
+        raise RuntimeError(str(exc)) from exc
+    context.launch_configurations['rosbag_path'] = rosbag_path
+    return []
+
+
+def _build_rosbag_player(context, *args, **kwargs):
+    if LaunchConfiguration('input_mode').perform(context) != 'rosbag':
+        return []
+    rosbag_path = LaunchConfiguration('rosbag_path').perform(context)
+    rosbag_topic = LaunchConfiguration('rosbag_topic').perform(context)
+    rosbag_loop = LaunchConfiguration('rosbag_loop').perform(context)
+    rosbag_rate = LaunchConfiguration('rosbag_rate').perform(context)
+    cmd = _build_rosbag_play_command(
+        rosbag_path=rosbag_path,
+        rosbag_topic=rosbag_topic,
+        rosbag_loop=rosbag_loop,
+        rosbag_rate=rosbag_rate,
+    )
+    return [
+        ExecuteProcess(
+            cmd=cmd,
+            output='screen',
+            name='rosbag_player',
+        )
+    ]
 
 
 def generate_launch_description():
@@ -185,6 +289,50 @@ def generate_launch_description():
             'Unknown names fail launch with the available preset list.'
         ),
     )
+    input_mode_arg = DeclareLaunchArgument(
+        'input_mode',
+        default_value='pcd',
+        description=(
+            'Phase 2 (FR-015): input source. "pcd" (default) plays PCD '
+            'files via pcd_loader_node and keeps the existing behaviour. '
+            '"rosbag" skips pcd_loader_node and runs "ros2 bag play" '
+            'against rosbag_path so the detector pipeline subscribes to '
+            '/input/points unchanged. Other values fail launch.'
+        ),
+    )
+    rosbag_path_arg = DeclareLaunchArgument(
+        'rosbag_path',
+        default_value='',
+        description=(
+            'Phase 2 (FR-015): path to the rosbag (file or directory) used '
+            'when input_mode:=rosbag. Required for the rosbag mode; launch '
+            'fails clearly when missing or pointing at a non-existent path. '
+            'Ignored when input_mode:=pcd.'
+        ),
+    )
+    rosbag_topic_arg = DeclareLaunchArgument(
+        'rosbag_topic',
+        default_value='',
+        description=(
+            'Phase 2 (FR-015): source point cloud topic inside the rosbag. '
+            'When non-empty, "ros2 bag play --remap <rosbag_topic>:=/input/'
+            'points" is used so the rest of the pipeline can subscribe via '
+            '/input/points without editing the bag. Leave empty when the '
+            'bag already publishes on /input/points.'
+        ),
+    )
+    rosbag_loop_arg = DeclareLaunchArgument(
+        'rosbag_loop',
+        default_value='false',
+        description=(
+            'Phase 2 (FR-015): if true, "ros2 bag play" runs with --loop.'
+        ),
+    )
+    rosbag_rate_arg = DeclareLaunchArgument(
+        'rosbag_rate',
+        default_value='1.0',
+        description='Phase 2 (FR-015): playback rate for "ros2 bag play".',
+    )
 
     pcd_file = LaunchConfiguration('pcd_file')
     pcd_directory = LaunchConfiguration('pcd_directory')
@@ -218,6 +366,10 @@ def generate_launch_description():
                 'publish_once': publish_once,
             },
         ],
+        # FR-015: input_mode:=rosbag skips pcd_loader_node so "ros2 bag
+        # play" can drive /input/points instead. input_mode:=pcd (the
+        # default) keeps the MVP / existing Phase 2 behaviour.
+        condition=LaunchConfigurationEquals('input_mode', 'pcd'),
     )
 
     vehicle_detector = Node(
@@ -301,12 +453,19 @@ def generate_launch_description():
         use_gui_arg,
         gui_host_arg,
         detector_preset_arg,
+        input_mode_arg,
+        rosbag_path_arg,
+        rosbag_topic_arg,
+        rosbag_loop_arg,
+        rosbag_rate_arg,
         OpaqueFunction(function=_resolve_pcd_file),
         OpaqueFunction(function=_resolve_detector_preset),
+        OpaqueFunction(function=_validate_input_mode),
         static_tf,
         pcd_loader,
         vehicle_detector,
         detection_sender,
         rviz,
         parameter_bridge,
+        OpaqueFunction(function=_build_rosbag_player),
     ])
