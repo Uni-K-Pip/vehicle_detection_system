@@ -196,6 +196,8 @@ def test_default_preset_is_no_op_overlay():
 
 def test_input_mode_default_is_pcd():
     """
+    Guard the input_mode launch arg default at "pcd".
+
     FR-015 requires input_mode:=pcd (or unset) to keep the existing
     behaviour. Guard the default so a future change cannot silently flip
     the pipeline to rosbag mode.
@@ -220,6 +222,8 @@ def test_input_mode_default_is_pcd():
 
 def test_rosbag_args_have_safe_defaults():
     """
+    Guard the rosbag_* launch args at inert defaults.
+
     FR-015: rosbag_path / rosbag_topic / rosbag_loop / rosbag_rate must
     have inert defaults so input_mode:=pcd users never accidentally
     spawn ``ros2 bag play``.
@@ -355,6 +359,8 @@ def test_build_rosbag_play_command_accepts_bool_loop():
 
 def test_pcd_loader_has_input_mode_condition():
     """
+    Guard pcd_loader_node behind a LaunchConfigurationEquals condition.
+
     FR-015: pcd_loader_node must only start when input_mode=pcd. Guard
     against accidentally removing the gating condition, which would
     cause both pcd_loader_node and ``ros2 bag play`` to publish to
