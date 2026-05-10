@@ -122,6 +122,31 @@ ros2 launch vehicle_detection vehicle_detection.launch.py \
 
 不明なプリセット名 (例: `detector_preset:=does_not_exist`) を指定した場合は、launch が起動失敗し、エラーメッセージに利用可能なプリセット一覧が表示される。プリセットは `params_file` のオーバーレイとして適用されるため、`params_file:=<custom>.yaml` と組み合わせると custom の値の上にプリセットが乗る。
 
+PCD の代わりに rosbag を入力源として使うには `input_mode:=rosbag` (Phase 2、FR-015) を使う。`input_mode` を省略するか `pcd` を指定したときは既存挙動 (PCD 単一/連続再生) のまま:
+
+```bash
+# rosbag2 形式のディレクトリを再生 (bag 内のトピックがそのまま /input/points に流れる場合)
+ros2 launch vehicle_detection vehicle_detection.launch.py \
+  input_mode:=rosbag \
+  rosbag_path:=/abs/path/to/bag
+
+# bag 内の点群トピックを /input/points に remap
+ros2 launch vehicle_detection vehicle_detection.launch.py \
+  input_mode:=rosbag \
+  rosbag_path:=/abs/path/to/bag \
+  rosbag_topic:=/lidar/points
+
+# ループ再生 + 倍速
+ros2 launch vehicle_detection vehicle_detection.launch.py \
+  input_mode:=rosbag \
+  rosbag_path:=/abs/path/to/bag \
+  rosbag_topic:=/lidar/points \
+  rosbag_loop:=true \
+  rosbag_rate:=2.0
+```
+
+`input_mode:=rosbag` のときは `pcd_loader_node` を起動せず、代わりに `ros2 bag play <rosbag_path> --rate <rosbag_rate> [--loop] [--remap <rosbag_topic>:=/input/points]` が `ExecuteProcess` として実行される。`rosbag_path` が未指定または存在しないパスを指している場合、launch は分かりやすいエラーで失敗する。`rosbag_topic` を空のままにすると remap せずに bag 内のトピックがそのまま流れる (bag 側で既に `/input/points` を使っている場合はこれで足りる)。rosbag の実データはリポジトリには含めず、各自で取得・配置する運用 (PCD と同じ)。
+
 `use_sender:=true` を指定すると `detection_sender_node` が追加され、`/vehicle_detections` への再パブリッシュおよび／または [`docs/payload_schema.md`](docs/payload_schema.md) に沿った JSON の POST を行う。`use_rviz:=true` で `src/vehicle_detection/rviz/vehicle_detection.rviz` を読み込んだ RViz が起動する。`use_gui:=true` (既定) は実行時パラメータ調整用の `parameter_bridge_node` を起動する。詳細は [ブラウザ GUI](#ブラウザ-gui) を参照。
 
 ## パイプラインの確認

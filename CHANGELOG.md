@@ -5,12 +5,47 @@
 ## [Unreleased]
 
 Phase 2 実用性改善のうち「複数PCD連続再生」(FR-011)、「検知結果の保存」
-(FR-012)、「HTTP payload schema のバージョン管理」(FR-013)、および
-「パラメータプリセット管理」(FR-014) を対象とする。残りの Phase 2 項目
-(rosbag 入力、簡易トラッキング) は本範囲外。
+(FR-012)、「HTTP payload schema のバージョン管理」(FR-013)、
+「パラメータプリセット管理」(FR-014)、および「rosbag 入力対応」(FR-015)
+を対象とする。残りの Phase 2 項目 (簡易トラッキング) は本範囲外。
 
 ### Added
 
+- rosbag 入力対応を追加 (FR-015)。launch 引数 `input_mode` (string、
+  初期値 `pcd`) で入力源を `pcd` / `rosbag` から切り替えられる。
+  `input_mode:=pcd` (既定) または未指定時は MVP / FR-011 と同じく
+  `pcd_loader_node` で PCD を再生する (既存挙動を変更しない)。
+  `input_mode:=rosbag` のときは `pcd_loader_node` を起動せず、代わりに
+  `ros2 bag play <rosbag_path> --rate <rosbag_rate> [--loop]
+  [--remap <rosbag_topic>:=/input/points]` を `ExecuteProcess` として
+  起動する。検知パイプライン (`vehicle_detector_node`、
+  `detection_sender_node`、`parameter_bridge_node`、static transform、
+  RViz) は `input_mode` の影響を受けず、`/input/points` を購読する
+  経路はそのまま。
+- launch 引数 `rosbag_path` (string、初期値 `""`)、`rosbag_topic`
+  (string、初期値 `""`)、`rosbag_loop` (bool、初期値 `false`)、
+  `rosbag_rate` (string、初期値 `1.0`) を追加。`rosbag_path` は
+  `input_mode:=rosbag` のときに必須で、相対パスは `pcd_file` と同じく
+  `Path.cwd()` を基準にして絶対パス化される。`rosbag_topic` が非空の
+  ときに `--remap <rosbag_topic>:=/input/points` を組み立てる。
+- `vehicle_detection.launch.py` に `_validate_input_mode_inputs()` と
+  `_build_rosbag_play_command()` の純粋ヘルパー、および
+  `_validate_input_mode` / `_build_rosbag_player` の OpaqueFunction を
+  追加。`input_mode` が `pcd` / `rosbag` 以外、`input_mode=rosbag` で
+  `rosbag_path` が空または存在しないパスのときに、原因を含む
+  `RuntimeError` を投げて launch を失敗させる。
+- `pcd_loader_node` を `LaunchConfigurationEquals('input_mode', 'pcd')`
+  で gate して、`input_mode:=rosbag` のときに起動しないようにした。
+  これにより rosbag 再生中に `/input/points` への二重 publish が
+  発生しない。
+- `test_launch_description.py` に FR-015 用の単体テストを追加:
+  `input_mode` の既定値 `pcd` 確認、`rosbag_path` / `rosbag_topic` /
+  `rosbag_loop` / `rosbag_rate` の既定値が inert であること、
+  `_validate_input_mode_inputs` の正常系 (`pcd`、有効な rosbag パス)
+  と異常系 (未知の `input_mode`、空の `rosbag_path`、存在しない
+  `rosbag_path`)、`_build_rosbag_play_command` の最小構成・`--loop` /
+  `--rate` / `--remap` 付与パターン・bool / string の `rosbag_loop`
+  受理、`pcd_loader_node` の `LaunchConfigurationEquals` condition。
 - 検知パラメータプリセット管理を追加 (FR-014)。launch 引数
   `detector_preset` (string、初期値 `default`) で
   `src/vehicle_detection/config/presets/<name>.yaml` を
@@ -96,6 +131,10 @@ Phase 2 実用性改善のうち「複数PCD連続再生」(FR-011)、「検知�
 
 ### Changed
 
+- `vehicle_detection.launch.py` の `pcd_loader_node` に
+  `LaunchConfigurationEquals('input_mode', 'pcd')` の condition を
+  付与した (FR-015)。`input_mode` 未指定または `pcd` のときの挙動は
+  既存と同一であり、`input_mode:=rosbag` のときのみ起動を抑制する。
 - `vehicle_detection.launch.py` の `vehicle_detector_node` の
   `parameters=` リストに、`detector_preset` から解決したプリセット YAML
   (絶対パス) を `params_file` の後ろに追加した (FR-014)。これにより

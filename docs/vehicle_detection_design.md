@@ -453,15 +453,25 @@ launch引数:
 | `use_rviz` | `false` | RViz2起動 |
 | `rviz_config` | `config/rviz_vehicle_detection.rviz` | RViz設定 |
 | `detector_preset` | `default` | 検知パラメータプリセット名 (Phase 2、FR-014) |
+| `input_mode` | `pcd` | 入力源: `pcd` または `rosbag` (Phase 2、FR-015) |
+| `rosbag_path` | `""` | rosbag パス (Phase 2、FR-015、`input_mode=rosbag` 時に必須) |
+| `rosbag_topic` | `""` | rosbag 内点群トピック名 (Phase 2、FR-015、空時は remap なし) |
+| `rosbag_loop` | `false` | `ros2 bag play --loop` (Phase 2、FR-015) |
+| `rosbag_rate` | `1.0` | `ros2 bag play --rate <rate>` (Phase 2、FR-015) |
 
 launch処理:
 
 1. `detector_params.yaml`を各ノードへ読み込む。
 2. launch引数で`pcd_file`, `input_frame_id`, `target_frame_id`, `send_mode`, `publish_once`を上書きできるようにする。
 3. `transforms.yaml`を読み、`tf2_ros/static_transform_publisher`を起動する。
-4. `pcd_loader_node`, `vehicle_detector_node`, `detection_sender_node`を起動する。
-5. `use_gui=true`なら`parameter_bridge_node`を起動する。
-6. `use_rviz=true`ならRViz2を起動する。
+4. `input_mode=pcd` (既定) なら `pcd_loader_node` を起動する。
+   `input_mode=rosbag` のときは `pcd_loader_node` をスキップし、
+   代わりに `ros2 bag play <rosbag_path> [...]` を `ExecuteProcess` で
+   起動する (詳細は 7.2 章)。
+5. `vehicle_detector_node`, `detection_sender_node` を起動する
+   (`input_mode` の影響を受けない)。
+6. `use_gui=true`なら`parameter_bridge_node`を起動する。
+7. `use_rviz=true`ならRViz2を起動する。
 
 TF設定:
 
@@ -543,6 +553,104 @@ detector_params.yaml  →  presets/<name>.yaml  →  個別の launch 引数 (di
   `near_range.yaml` が存在すること。
 - 不明なプリセット名で `_resolve_preset_path` が `ValueError` を投げること
   (ヘルパー関数を直接呼び出す pytest)。
+
+### 7.2 入力切替設計 (Phase 2, FR-015)
+
+MVP の単一PCD再生および FR-011 の複数PCD連続再生に加えて、rosbag を
+入力源として扱えるようにする。本対応は launch レベルでの切替に限定し、
+`pcd_loader_node` 側の C++ コードや `vehicle_detector_node` 以降の
+パイプラインには手を入れない。
+
+launch 引数:
+
+| 引数 | 初期値 | 用途 |
+| --- | --- | --- |
+| `input_mode` | `pcd` | 入力源 (`pcd` / `rosbag`) |
+| `rosbag_path` | `""` | rosbag のパス (rosbag2 形式のディレクトリ、または単一ファイル形式の bag) |
+| `rosbag_topic` | `""` | rosbag 内の点群トピック名 (空時は remap なし) |
+| `rosbag_loop` | `false` | `ros2 bag play --loop` を有効化する |
+| `rosbag_rate` | `1.0` | `ros2 bag play --rate <rate>` |
+
+切替ロジック:
+
+1. `_validate_input_mode` OpaqueFunction が起動時に `input_mode` と
+   `rosbag_path` を検証する。
+   - `input_mode` が `pcd` / `rosbag` 以外なら `RuntimeError` を投げて
+     launch を失敗させる。
+   - `input_mode=rosbag` のときに `rosbag_path` が空、または存在しない
+     パスを指している場合も同様に失敗させる。
+   - `input_mode=pcd` のときは `rosbag_path` の値を一切検証しない
+     (既定では空文字なので、誤って検証で落とさないようにする)。
+   - `rosbag_path` が相対パスのときは、`pcd_file` と同じく
+     `Path.cwd()` を基準にして絶対パス化してからコンテキストへ書き戻す。
+2. `pcd_loader_node` は `LaunchConfigurationEquals('input_mode', 'pcd')`
+   条件付きで宣言する。`input_mode=rosbag` のとき `pcd_loader_node` は
+   起動せず、`/input/points` への二重 publish が発生しない。
+3. `_build_rosbag_player` OpaqueFunction が `input_mode=rosbag` のときに
+   `ExecuteProcess` を返す。コマンドは:
+
+   ```text
+   ros2 bag play <rosbag_path> --rate <rosbag_rate>
+       [--loop]
+       [--remap <rosbag_topic>:=/input/points]
+   ```
+
+   - `rosbag_loop` が真値 (`true`/`1`/`yes`/`on`) のとき `--loop` を付与。
+   - `rosbag_topic` が非空のとき `--remap <rosbag_topic>:=/input/points`
+     を付与し、bag 内のトピックを `vehicle_detector_node` が購読する
+     `/input/points` へリマップする。
+   - `rosbag_topic` が空のときは remap せず、bag 内のトピックがそのまま
+     流れる。bag 側で既に `/input/points` を使っている場合や、検知ノード
+     側のトピック名を YAML で変えている場合の運用に対応する。
+
+ヘルパーは pure 関数として切り出し、unit test で個別に検証する。
+
+| ヘルパー | 役割 |
+| --- | --- |
+| `_validate_input_mode_inputs(input_mode, rosbag_path)` | `input_mode` と `rosbag_path` の整合性検証。`ValueError` を投げる |
+| `_build_rosbag_play_command(rosbag_path, rosbag_topic, rosbag_loop, rosbag_rate, input_points_topic='/input/points')` | `ros2 bag play` の引数リストを返す |
+| `_validate_input_mode(context, ...)` | OpaqueFunction 本体。`ValueError` を `RuntimeError` に変換して launch を失敗させる |
+| `_build_rosbag_player(context, ...)` | OpaqueFunction 本体。`input_mode=rosbag` のときに `ExecuteProcess` を返す |
+
+各ノードへの影響:
+
+- `pcd_loader_node`: `input_mode=pcd` のときのみ起動 (条件付き)。MVP /
+  FR-011 / FR-012 / FR-013 / FR-014 のいずれの挙動も変えない。
+- `vehicle_detector_node`、`detection_sender_node`、`parameter_bridge_node`、
+  static transform publisher、RViz: `input_mode` の影響を受けない。
+  rosbag 経由でも `/input/points` を購読し続けるため、検知パイプラインは
+  変更不要。
+
+異常時:
+
+- `input_mode` が未知の値: launch を `RuntimeError` で失敗。エラーには
+  指定値と取り得る値の一覧を含める。
+- `input_mode=rosbag` で `rosbag_path` が空: launch を `RuntimeError` で
+  失敗。`rosbag_path` を指定する旨のヒントを含める。
+- `input_mode=rosbag` で `rosbag_path` が存在しない: launch を
+  `RuntimeError` で失敗。指定パスを含めるので原因を特定しやすい。
+- `ros2 bag play` 自体が失敗 (bag 破損、対応コーデック不在など) :
+  `ExecuteProcess` がエラー終了するが、検知パイプラインは生存し続ける。
+  bag 不在のときと同じく、ユーザは `--remap` / `rosbag_path` を見直す。
+
+データ配置の方針:
+
+- rosbag 実データはリポジトリに含めない (PCD と同じ運用)。利用者が
+  手元で bag を取得し、`rosbag_path:=<path>` で指定する。
+- bag のメタデータ (取得元、ライセンス、配布条件) は利用者責任で
+  管理する。
+
+テスト観点:
+
+- launch 引数 `input_mode` / `rosbag_path` / `rosbag_topic` /
+  `rosbag_loop` / `rosbag_rate` が宣言され、既定値が `input_mode=pcd`、
+  rosbag 系は inert (空文字 / `false` / `1.0`) であること。
+- `_validate_input_mode_inputs` が `pcd`、有効な `rosbag` パス、無効な
+  パス、空パス、未知の `input_mode` をそれぞれ正しく扱うこと。
+- `_build_rosbag_play_command` が最小構成、`--rate`、`--loop`、
+  `--remap` 付与の各パターンで期待通りのコマンドリストを返すこと。
+- `pcd_loader_node` が `LaunchConfigurationEquals('input_mode', 'pcd')`
+  で gating されており、`input_mode=rosbag` のとき抑制されること。
 
 ## 8. 設定ファイル設計
 
@@ -634,6 +742,7 @@ PandaSet公式サイトは、PandaSetを自動運転向けopen-source datasetと
 | 再生リスト解決 (Phase 2) | `pcd_files`優先、`pcd_directory`展開、未指定時の単一PCDフォールバック、欠落ファイル拒否、`loop`末尾挙動 |
 | 検知結果保存 (Phase 2) | 無効時 no-op、JSONL 1 行 append、複数 append の順序保持、不正パス時 no-throw、未対応フォーマット拒否 |
 | プリセット解決 (Phase 2、FR-014) | 既知プリセット名で絶対パスが返る、不明プリセット名で `ValueError`、`detector_preset` launch 引数の宣言 |
+| 入力切替 (Phase 2、FR-015) | `input_mode` / `rosbag_*` 引数の宣言と既定値、`_validate_input_mode_inputs` の正常／異常系、`_build_rosbag_play_command` の `--rate` / `--loop` / `--remap` 組み立て、`pcd_loader_node` の launch condition |
 
 ROS統合テスト:
 
@@ -686,6 +795,7 @@ ros2 param set /vehicle_detector_node voxel_leaf_size 0.25
 | FR-012 検知結果の保存 (Phase 2) | 6.3章「検知結果保存」、12章 |
 | FR-013 HTTP payload schema のバージョン管理 (Phase 2) | 6.3章「Payload schema バージョン管理」、12章 |
 | FR-014 パラメータプリセット管理 (Phase 2) | 7.1章「プリセット設計」、12章 |
+| FR-015 rosbag入力対応 (Phase 2) | 7.2章「入力切替設計」、12章 |
 | FR-006 可視化 | 5章、6.2章、7章 |
 | FR-007 GUIによるパラメータ調整 | 6.4章 |
 | FR-008 設定ファイル | 8章、`config/detector_params.yaml` |
