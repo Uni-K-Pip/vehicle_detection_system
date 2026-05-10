@@ -208,7 +208,7 @@ colcon test --merge-install --packages-select vehicle_detection
 colcon test-result --verbose --test-result-base build/vehicle_detection
 ```
 
-最新のフル ROS 2 実行記録は **211 tests, 0 errors, 0 failures, 24 skipped** ([`docs/results.md`](docs/results.md) を参照)。実行環境は `osrf/ros:jazzy-desktop` ベースの Docker イメージ。
+最新のフル ROS 2 実行記録は **223 tests, 0 errors, 0 failures, 24 skipped** ([`docs/results.md`](docs/results.md) を参照)。実行環境は `osrf/ros:jazzy-desktop` ベースの Docker イメージ。
 
 ## 初期決定事項
 

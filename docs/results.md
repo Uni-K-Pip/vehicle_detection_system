@@ -40,7 +40,7 @@
 
 `colcon test --merge-install --packages-select vehicle_detection` の
 最新フル実行 (Jazzy + Docker) の結果は
-**211 tests, 0 errors, 0 failures, 24 skipped**。実行されるテスト:
+**223 tests, 0 errors, 0 failures, 24 skipped**。実行されるテスト:
 
 - `test_parameter_validation` — パラメータ検証ヘルパーに対する GTest
   単体テスト
@@ -65,7 +65,14 @@
   `detector_preset` launch 引数の宣言と既定値、3 種の同梱プリセット
   ファイルの存在、`_resolve_preset_path` の既知名解決、不明名・
   ディレクトリ欠損時の `ValueError`、`default.yaml` が空オーバーレイで
-  あることを確認する。
+  あることを確認する。Phase 2 (FR-015) として、`input_mode` /
+  `rosbag_path` / `rosbag_topic` / `rosbag_loop` / `rosbag_rate` の
+  launch 引数宣言と既定値、`_validate_input_mode_inputs` の正常／異常系
+  (`pcd` 受理、有効な rosbag dir/file 受理、未知の `input_mode` 拒否、
+  空 / 存在しない `rosbag_path` 拒否)、`_build_rosbag_play_command` の
+  最小構成・`--loop`・`--rate`・`--remap` 組み立て、`pcd_loader_node` が
+  `LaunchConfigurationEquals('input_mode', 'pcd')` で gating されている
+  ことを確認する。
 
 ## 確認済みトピック
 
